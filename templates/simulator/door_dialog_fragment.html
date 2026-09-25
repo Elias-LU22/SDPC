@@ -1,0 +1,233 @@
+<div class="space-y-6">
+
+    <!-- Tarjeta del Prospecto: Medidores de Paciencia e Interés en Vivo -->
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+            <div class="flex items-center space-x-3.5">
+                <div class="w-14 h-14 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 flex items-center justify-center text-3xl shadow-inner">
+                    {{ scenario.mood_icon }}
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-mono font-bold text-slate-400">Casa #{{ door.door_number }}</span>
+                        <h2 class="text-lg font-black text-white">{{ door.resident_name }}</h2>
+                    </div>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <span class="text-xs text-slate-400">{{ door.occupant_role }}</span>
+                        <span class="text-slate-600">•</span>
+                        <span class="text-[11px] px-2 py-0.5 rounded-full font-bold uppercase bg-slate-800 text-indigo-300 border border-slate-700">
+                            {{ scenario.archetype_name }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estado actual de la puerta -->
+            <div>
+                {% if door.status == 'SALE_CLOSED' %}
+                    <span class="px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-extrabold flex items-center gap-1.5 shadow-lg shadow-emerald-500/10">
+                        <span>🎉</span> ¡VENTA CERRADA!
+                    </span>
+                {% elif door.status == 'APPOINTMENT' %}
+                    <span class="px-4 py-2 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-extrabold flex items-center gap-1.5 shadow-lg shadow-amber-500/10">
+                        <span>📅</span> ¡CITA ASEGURADA!
+                    </span>
+                {% elif door.status == 'REJECTED' %}
+                    <span class="px-4 py-2 rounded-xl bg-rose-500/20 text-rose-300 border border-rose-500/40 text-xs font-extrabold flex items-center gap-1.5">
+                        <span>❌</span> PUERTA CERRADA
+                    </span>
+                {% elif door.status == 'NOT_HOME' %}
+                    <span class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-extrabold flex items-center gap-1.5">
+                        <span>📭</span> AUSENTE
+                    </span>
+                {% else %}
+                    <span class="px-3 py-1.5 rounded-xl bg-indigo-500/10 text-indigo-300 border border-indigo-500/30 text-xs font-bold flex items-center gap-1.5 animate-pulse">
+                        <span class="w-2 h-2 rounded-full bg-indigo-400"></span> En Diálogo
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Barras de Paciencia e Interés -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+            <!-- Paciencia del Prospecto -->
+            <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/90">
+                <div class="flex justify-between items-center text-xs mb-1.5">
+                    <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                        <span>⏳</span> Paciencia del Residente
+                    </span>
+                    <span class="font-black {% if door.patience > 50 %}text-emerald-400{% elif door.patience > 25 %}text-amber-400{% else %}text-rose-400{% endif %}">
+                        {{ door.patience }}%
+                    </span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                    <div class="h-2.5 rounded-full transition-all duration-500 {% if door.patience > 50 %}bg-emerald-500{% elif door.patience > 25 %}bg-amber-500{% else %}bg-rose-500{% endif %}" style="width: {{ door.patience }}%"></div>
+                </div>
+                <span class="text-[10px] text-slate-500 mt-1 block">
+                    {% if door.patience > 60 %}Receptivo y dispuesto a escuchar.{% elif door.patience > 25 %}Inquieto; ve al grano pronto.{% else %}¡En peligro inminente de cerrar la puerta!{% endif %}
+                </span>
+            </div>
+
+            <!-- Nivel de Interés en la Oferta -->
+            <div class="bg-slate-950/70 p-3.5 rounded-xl border border-slate-800/90">
+                <div class="flex justify-between items-center text-xs mb-1.5">
+                    <span class="font-bold text-slate-300 flex items-center gap-1.5">
+                        <span>💡</span> Interés Comercial
+                    </span>
+                    <span class="font-black text-indigo-400">
+                        {{ door.interest }}%
+                    </span>
+                </div>
+                <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden">
+                    <div class="bg-gradient-to-r from-indigo-500 to-emerald-400 h-2.5 rounded-full transition-all duration-500" style="width: {{ door.interest }}%"></div>
+                </div>
+                <span class="text-[10px] text-slate-500 mt-1 block">
+                    {% if door.interest >= 70 %}¡Listo para cerrar contrato o cita!{% elif door.interest >= 40 %}Identificó un dolor en su servicio.{% else %}Sin interés aún; requiere sondeo.{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial de Diálogo de la Puerta (Burbujas Estilo Chat de Campo) -->
+    {% if door.dialogue_history %}
+        <div class="space-y-4">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Registro de la Conversación</span>
+            
+            <div class="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                {% for exchange in door.dialogue_history %}
+                    <!-- Prospecto -->
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-sm flex-shrink-0 border border-slate-700">
+                            {{ scenario.mood_icon }}
+                        </div>
+                        <div class="bg-slate-800/90 border border-slate-700/60 p-3.5 rounded-2xl rounded-tl-sm text-sm text-slate-200 max-w-xl">
+                            {{ exchange.prospect }}
+                        </div>
+                    </div>
+
+                    <!-- Vendedor (Tú) -->
+                    <div class="flex items-start justify-end space-x-3">
+                        <div class="bg-indigo-600/90 border border-indigo-500/40 p-3.5 rounded-2xl rounded-tr-sm text-sm text-white max-w-xl shadow-md">
+                            <span class="text-[10px] text-indigo-200 block font-semibold mb-1 uppercase tracking-wider">Tu Respuesta:</span>
+                            {{ exchange.player }}
+                        </div>
+                        <div class="w-8 h-8 rounded-full bg-indigo-900 border border-indigo-500/40 flex items-center justify-center text-sm flex-shrink-0">
+                            💼
+                        </div>
+                    </div>
+
+                    <!-- Caja de Feedback Pedagógico del Coach -->
+                    <div class="bg-slate-950/80 border-l-4 {% if exchange.interest_change > 0 %}border-emerald-500 bg-emerald-950/10{% else %}border-amber-500 bg-amber-950/10{% endif %} p-3.5 rounded-r-xl text-xs space-y-1">
+                        <div class="flex items-center justify-between font-bold">
+                            <span class="text-slate-300 flex items-center gap-1.5">
+                                <span>🧠</span> Táctica: <em class="text-indigo-300 not-italic font-semibold">{{ exchange.tactic }}</em>
+                            </span>
+                            <div class="flex items-center gap-2">
+                                <span class="{% if exchange.interest_change >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %} font-mono">
+                                    {% if exchange.interest_change > 0 %}+{% endif %}{{ exchange.interest_change }}% Interés
+                                </span>
+                                <span class="{% if exchange.patience_change >= 0 %}text-emerald-400{% else %}text-rose-400{% endif %} font-mono">
+                                    {% if exchange.patience_change > 0 %}+{% endif %}{{ exchange.patience_change }}% Paciencia
+                                </span>
+                            </div>
+                        </div>
+                        <p class="text-slate-400 leading-relaxed">{{ exchange.coach_feedback }}</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- ÁREA ACTIVA: Declaración Actual y Opciones de Diálogo -->
+    {% if not is_resolved and node_data %}
+        <div class="bg-slate-900 border border-indigo-500/40 rounded-2xl p-6 shadow-2xl space-y-6">
+            
+            <!-- Declaración en curso del prospecto -->
+            <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-indigo-400 block mb-2">Respuesta en Puerta:</span>
+                <div class="p-4 bg-slate-950 border border-slate-800 rounded-xl text-base font-medium text-slate-100 flex items-start space-x-3">
+                    <span class="text-2xl flex-shrink-0">{{ scenario.mood_icon }}</span>
+                    <p class="italic text-slate-200">"{{ node_data.statement }}"</p>
+                </div>
+            </div>
+
+            <!-- Opciones de respuesta para el vendedor -->
+            <div>
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">
+                    ¿Cómo respondes? Selecciona tu estrategia de venta:
+                </span>
+
+                <div class="space-y-3">
+                    {% for opt in node_data.options %}
+                        <form hx-post="{% url 'simulator:dialogue_step' door.id %}" hx-target="#dialog-container" hx-swap="innerHTML" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="option_id" value="{{ opt.id }}">
+                            <button type="submit" class="w-full text-left p-4 rounded-xl bg-slate-950/80 hover:bg-indigo-950/40 border border-slate-800 hover:border-indigo-500/60 transition group flex items-start space-x-3.5 shadow-sm">
+                                <span class="w-6 h-6 rounded-full bg-slate-800 group-hover:bg-indigo-600 text-slate-300 group-hover:text-white flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5 transition">
+                                    {{ forloop.counter }}
+                                </span>
+                                <div class="flex-1">
+                                    <p class="text-sm font-medium text-slate-200 group-hover:text-white transition leading-snug">
+                                        "{{ opt.text }}"
+                                    </p>
+                                </div>
+                            </button>
+                        </form>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
+    {% elif is_resolved %}
+        <!-- Pantalla de Desenlace de la Puerta -->
+        <div class="bg-slate-900 border {% if door.status == 'SALE_CLOSED' %}border-emerald-500/50 bg-emerald-950/10{% elif door.status == 'APPOINTMENT' %}border-amber-500/50 bg-amber-950/10{% else %}border-slate-800{% endif %} rounded-2xl p-6 text-center space-y-4">
+            
+            {% if door.status == 'SALE_CLOSED' %}
+                <div class="text-5xl">🏆</div>
+                <h3 class="text-2xl font-black text-emerald-400">¡Contrato Cerrado con Éxito!</h3>
+                <p class="text-sm text-slate-300 max-w-lg mx-auto">
+                    Excelente lectura del cliente. Resolviste sus dudas, no caíste en rodeos y aseguraste la instalación.
+                </p>
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 font-extrabold text-sm border border-emerald-500/30">
+                    💰 Comisión Ganada: +${{ day.product.commission_per_sale|floatformat:2 }} | ⚡ +130 XP
+                </div>
+
+            {% elif door.status == 'APPOINTMENT' %}
+                <div class="text-5xl">📅</div>
+                <h3 class="text-2xl font-black text-amber-400">¡Cita de Diagnóstico Agendada!</h3>
+                <p class="text-sm text-slate-300 max-w-lg mx-auto">
+                    Aseguraste hora y fecha con los tomadores de decisión. La puntualidad y el seguimiento cerrarán esta venta.
+                </p>
+                <div class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 text-amber-300 font-extrabold text-sm border border-amber-500/30">
+                    💰 Comisión por Cita: +${{ day.product.commission_per_appointment|floatformat:2 }} | ⚡ +70 XP
+                </div>
+
+            {% elif door.status == 'REJECTED' %}
+                <div class="text-5xl">🚪</div>
+                <h3 class="text-xl font-black text-rose-400">Interacción Concluida sin Venta</h3>
+                <p class="text-sm text-slate-400 max-w-lg mx-auto">
+                    El prospecto decidió no continuar. Recuerda que en cambaceo el "No" es solo estadística. Toma nota del aprendizaje y camina a la siguiente puerta.
+                </p>
+                <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 text-xs font-semibold">
+                    ⚡ +20 XP por experiencia de campo acumulada
+                </div>
+
+            {% elif door.status == 'NOT_HOME' %}
+                <div class="text-5xl">📭</div>
+                <h3 class="text-xl font-black text-slate-300">Casa Sin Respuesta</h3>
+                <p class="text-sm text-slate-400 max-w-lg mx-auto">
+                    Dejaste un colgador de puerta con la oferta del vecindario. La disciplina de no perder tiempo en puertas vacías salva tu jornada.
+                </p>
+            {% endif %}
+
+            <div class="pt-4">
+                <a href="{% url 'simulator:street_view' day.id %}" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition">
+                    <span>🚶‍♂️</span> Volver a la Calle (Siguiente Puerta)
+                </a>
+            </div>
+
+        </div>
+    {% endif %}
+
+</div>

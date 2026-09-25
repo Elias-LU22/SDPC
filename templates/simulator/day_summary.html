@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Reporte de Jornada #{{ day.id }} - {{ day.neighborhood.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto space-y-8">
+
+    <!-- Cabecera de Resultados -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/40 p-6 md:p-8 rounded-3xl border border-slate-800 shadow-2xl relative overflow-hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold border border-emerald-500/30 uppercase tracking-wider">
+                        Jornada Concluida
+                    </span>
+                    <span class="text-xs text-slate-400">{{ day.completed_at|date:"d M Y, H:i" }}</span>
+                </div>
+                <h1 class="text-2xl md:text-3xl font-black text-white">
+                    Resultados en {{ day.neighborhood.name }}
+                </h1>
+                <p class="text-sm text-slate-400 mt-1">
+                    Campaña: <strong class="text-slate-200">{{ day.product.name }}</strong> ({{ day.product.icon_emoji }})
+                </p>
+            </div>
+
+            <!-- Ganancias de la jornada -->
+            <div class="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl text-center md:text-right">
+                <span class="text-xs text-slate-400 font-semibold block">Comisiones Ganadas Hoy</span>
+                <span class="text-3xl font-black text-emerald-400">+${{ day.earnings|floatformat:2 }}</span>
+                <span class="text-[11px] text-slate-400 block mt-1">Acreditado a tu saldo de carrera</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- EMBUDO DE CONVERSIÓN VISUAL (SALES FUNNEL) -->
+    <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl">
+        <h2 class="text-lg font-black text-white mb-6 flex items-center gap-2">
+            <span>🌪️</span> Embudo de Conversión en Calle
+        </h2>
+
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <!-- Paso 1 -->
+            <div class="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div>
+                    <span class="text-[11px] text-slate-400 uppercase font-bold tracking-wider block">1. Tocadas</span>
+                    <div class="text-2xl font-black text-white mt-1">{{ day.doors_knocked }}</div>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-800 text-[11px] text-slate-500">
+                    100% esfuerzo en calle
+                </div>
+            </div>
+
+            <!-- Paso 2 -->
+            <div class="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div>
+                    <span class="text-[11px] text-slate-400 uppercase font-bold tracking-wider block">2. Abiertas / Hubo Alguien</span>
+                    <div class="text-2xl font-black text-indigo-400 mt-1">{{ day.doors_opened }}</div>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-800 text-[11px] text-indigo-300 font-semibold">
+                    {{ opened_rate }}% tasa de apertura
+                </div>
+            </div>
+
+            <!-- Paso 3 -->
+            <div class="bg-slate-950/60 p-4 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                <div>
+                    <span class="text-[11px] text-slate-400 uppercase font-bold tracking-wider block">3. Conversaciones / Pitches</span>
+                    <div class="text-2xl font-black text-amber-400 mt-1">{{ day.pitches_started }}</div>
+                </div>
+                <div class="mt-4 pt-2 border-t border-slate-800 text-[11px] text-amber-300 font-semibold">
+                    {{ pitch_rate }}% iniciaron diálogo
+                </div>
+            </div>
+
+            <!-- Paso 4 -->
+            <div class="bg-slate-950/60 p-4 rounded-2xl border border-emerald-500/30 bg-emerald-950/10 flex flex-col justify-between">
+                <div>
+                    <span class="text-[11px] text-emerald-400 uppercase font-bold tracking-wider block">4. Cierres & Citas</span>
+                    <div class="text-2xl font-black text-emerald-400 mt-1">{{ day.sales_closed }} <span class="text-sm font-normal text-slate-400">ventas</span> / {{ day.appointments_booked }} <span class="text-sm font-normal text-slate-400">citas</span></div>
+                </div>
+                <div class="mt-4 pt-2 border-t border-emerald-500/20 text-[11px] text-emerald-300 font-bold">
+                    {{ success_rate }}% conversión total
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ANÁLISIS PEDAGÓGICO DEL SALES COACH -->
+    <div class="bg-slate-900 border border-indigo-500/30 rounded-3xl p-6 md:p-8 shadow-xl space-y-6">
+        <div class="flex items-center space-x-3">
+            <div class="w-12 h-12 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-2xl">
+                🧠
+            </div>
+            <div>
+                <h2 class="text-xl font-black text-white">Informe del Sales Coach de Campo</h2>
+                <p class="text-xs text-slate-400">Retroalimentación táctica basada en tus elecciones frente al cliente</p>
+            </div>
+        </div>
+
+        <div class="bg-slate-950/70 p-6 rounded-2xl border border-slate-800/80 text-sm leading-relaxed text-slate-300 whitespace-pre-line font-normal">
+            {{ day.coach_summary }}
+        </div>
+    </div>
+
+    <!-- AUDITORÍA DE OBJECCIONES Y DECISIONES DE LA JORNADA -->
+    {% if logs %}
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 shadow-xl space-y-4">
+            <h2 class="text-lg font-black text-white flex items-center gap-2">
+                <span>📋</span> Bitácora Táctica: Decisiones Puerta por Puerta
+            </h2>
+            <p class="text-xs text-slate-400">Revisa qué objeciones manejaste con éxito y cuáles detonaron el rechazo.</p>
+
+            <div class="space-y-3 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                {% for log in logs %}
+                    <div class="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80 space-y-2">
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="font-bold text-slate-300">
+                                Casa #{{ log.door.door_number }} • {{ log.door.resident_name }} ({{ log.door.get_archetype_display }})
+                            </span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase {% if log.interest_change > 0 %}bg-emerald-500/20 text-emerald-300{% else %}bg-amber-500/20 text-amber-300{% endif %}">
+                                {{ log.tactic_type }}
+                            </span>
+                        </div>
+                        <div class="text-xs text-slate-400 italic">
+                            "{{ log.prospect_statement }}"
+                        </div>
+                        <div class="text-xs text-indigo-300">
+                            <strong>Tu respuesta:</strong> "{{ log.player_choice_text }}"
+                        </div>
+                        <div class="text-[11px] text-slate-500 pt-1 border-t border-slate-800">
+                            <strong>Consejo:</strong> {{ log.coach_critique }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- ACCIONES FINALES -->
+    <div class="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+        <a href="{% url 'core:dashboard' %}" class="w-full sm:w-auto px-8 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition text-center flex items-center justify-center gap-2">
+            <span>🏠</span> Volver al Cuartel General (Dashboard)
+        </a>
+        <a href="{% url 'core:dashboard' %}#nueva-jornada" class="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-semibold text-sm transition text-center">
+            Iniciar Otra Jornada de Campo
+        </a>
+    </div>
+
+</div>
+{% endblock %}

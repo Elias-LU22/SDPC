@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block title %}Calle en Terreno - {{ day.neighborhood.name }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- HUD Superior: Recursos y Estado de la Jornada -->
+    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-xl backdrop-blur">
+        <div class="flex flex-col lg:flex-row items-center justify-between gap-6">
+            
+            <!-- Info de la Campaña y Zona -->
+            <div class="flex items-center space-x-4 w-full lg:w-auto">
+                <span class="text-4xl p-3 bg-slate-950 rounded-2xl border border-slate-800">{{ day.product.icon_emoji }}</span>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-xl font-black text-white">{{ day.neighborhood.name }}</h1>
+                        <span class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-semibold border border-slate-700">
+                            {{ day.neighborhood.economic_level }}
+                        </span>
+                    </div>
+                    <p class="text-xs text-indigo-400 font-medium mt-0.5">
+                        Campaña activa: <span class="text-white">{{ day.product.name }}</span>
+                    </p>
+                    <div class="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                        <span class="flex items-center gap-1">⏰ <strong class="text-slate-200">{{ day.current_time_str }}</strong></span>
+                        <span>•</span>
+                        <span>Avance: <strong class="text-slate-200">{{ visited_doors }}/{{ total_doors }}</strong> puertas ({{ progress_pct }}%)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Barras de Energía y Moral del Vendedor -->
+            <div class="grid grid-cols-2 gap-4 w-full lg:w-96">
+                <!-- Energía -->
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    <div class="flex justify-between items-center text-xs mb-1.5">
+                        <span class="font-semibold text-slate-300 flex items-center gap-1.5">
+                            <span>⚡</span> Energía
+                        </span>
+                        <span class="font-bold {% if day.energy > 50 %}text-emerald-400{% elif day.energy > 20 %}text-amber-400{% else %}text-rose-400{% endif %}">
+                            {{ day.energy }}%
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div class="h-2 rounded-full transition-all duration-300 {% if day.energy > 50 %}bg-emerald-500{% elif day.energy > 20 %}bg-amber-500{% else %}bg-rose-500{% endif %}" style="width: {{ day.energy }}%"></div>
+                    </div>
+                </div>
+
+                <!-- Moral -->
+                <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    <div class="flex justify-between items-center text-xs mb-1.5">
+                        <span class="font-semibold text-slate-300 flex items-center gap-1.5">
+                            <span>🧠</span> Moral
+                        </span>
+                        <span class="font-bold {% if day.morale > 50 %}text-blue-400{% elif day.morale > 20 %}text-amber-400{% else %}text-rose-400{% endif %}">
+                            {{ day.morale }}%
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-2 overflow-hidden">
+                        <div class="h-2 rounded-full transition-all duration-300 {% if day.morale > 50 %}bg-blue-500{% elif day.morale > 20 %}bg-amber-500{% else %}bg-rose-500{% endif %}" style="width: {{ day.morale }}%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Marcador Rápido y Botón Finalizar -->
+            <div class="flex items-center gap-4 w-full lg:w-auto justify-between lg:justify-end">
+                <div class="text-right">
+                    <div class="text-xs text-slate-400">Comisiones de hoy:</div>
+                    <div class="text-xl font-black text-emerald-400">+${{ day.earnings|floatformat:2 }}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">{{ day.sales_closed }} ventas | {{ day.appointments_booked }} citas</div>
+                </div>
+
+                <form method="POST" action="{% url 'simulator:finish_day' day.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white border border-slate-700 transition flex items-center gap-2">
+                        <span>🏁</span>
+                        <span>Terminar Jornada</span>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Alertas si terminó o si está exhausto -->
+    {% if is_exhausted %}
+        <div class="p-4 rounded-xl bg-rose-500/20 border border-rose-500/40 text-rose-200 text-sm flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">⚠️</span>
+                <span><strong>¡Te has quedado sin energía o moral!</strong> Prospectar bajo agotamiento reduce tu efectividad a cero. Concluye la jornada para analizar tu aprendizaje con el coach.</span>
+            </div>
+            <form method="POST" action="{% url 'simulator:finish_day' day.id %}">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 rounded-lg bg-rose-600 text-white font-bold text-xs hover:bg-rose-500 transition">
+                    Ver Reporte Final
+                </button>
+            </form>
+        </div>
+    {% elif all_completed %}
+        <div class="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-200 text-sm flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🎉</span>
+                <span><strong>¡Has recorrido todas las casas de la calle!</strong> Excelente disciplina de prospección. Revisa tu desempeño en el reporte diario.</span>
+            </div>
+            <form method="POST" action="{% url 'simulator:finish_day' day.id %}">
+                {% csrf_token %}
+                <button type="submit" class="px-4 py-2 rounded-lg bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-500 transition">
+                    Ver Resultados
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+    <!-- MAPA VISUAL DE LA CALLE: ACERA IZQUIERDA / CALZADA / ACERA DERECHA -->
+    <div class="relative bg-slate-950/80 border border-slate-800 rounded-3xl p-6 md:p-8 overflow-hidden shadow-2xl">
+        
+        <div class="text-center mb-8">
+            <span class="text-xs uppercase tracking-widest text-slate-500 font-bold">Mapa de Canvassing en Terreno</span>
+            <h2 class="text-xl md:text-2xl font-black text-white mt-1">Avenida Principal del Fraccionamiento</h2>
+            <p class="text-xs text-slate-400 mt-1">Toca las puertas una a una. Aplica tu apertura rápida de 15 segundos para no perder al prospecto.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+            
+            <!-- ACERA IZQUIERDA (Pares) -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs font-bold text-slate-400">
+                    <span>ACERA NORTE (CASAS IMPARES/IZQUIERDA)</span>
+                    <span>LADO A</span>
+                </div>
+
+                {% for door in left_doors %}
+                    <div class="bg-slate-900/90 border {% if door.status == 'SALE_CLOSED' %}border-emerald-500/50 bg-emerald-950/20{% elif door.status == 'APPOINTMENT' %}border-amber-500/50 bg-amber-950/20{% elif door.status == 'REJECTED' %}border-rose-900/40 opacity-70{% elif door.status == 'NOT_HOME' %}border-slate-800 opacity-60{% elif door.status == 'IN_PROGRESS' %}border-indigo-500 ring-2 ring-indigo-500/30{% else %}border-slate-800 hover:border-slate-700{% endif %} rounded-2xl p-4 transition-all duration-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-2xl">{{ door.house_facade|slice:":2" }}</span>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-mono font-bold text-slate-400">#{{ door.door_number }}</span>
+                                        <h3 class="text-sm font-bold text-white">{{ door.resident_name }}</h3>
+                                    </div>
+                                    <p class="text-[11px] text-slate-400">{{ door.house_facade|slice:"2:" }}</p>
+                                </div>
+                            </div>
+
+                            <!-- Estado / Acción -->
+                            <div>
+                                {% if door.status == 'UNVISITED' %}
+                                    <a href="{% url 'simulator:knock_door' door.id %}" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5">
+                                        <span>🔔</span> Tocar
+                                    </a>
+                                {% elif door.status == 'IN_PROGRESS' %}
+                                    <a href="{% url 'simulator:door_encounter' door.id %}" class="px-3 py-1.5 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition flex items-center gap-1.5 animate-pulse">
+                                        <span>💬</span> Hablar
+                                    </a>
+                                {% elif door.status == 'SALE_CLOSED' %}
+                                    <span class="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1">
+                                        <span>🎉</span> Venta
+                                    </span>
+                                {% elif door.status == 'APPOINTMENT' %}
+                                    <span class="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1">
+                                        <span>📅</span> Cita
+                                    </span>
+                                {% elif door.status == 'REJECTED' %}
+                                    <span class="px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-semibold flex items-center gap-1">
+                                        <span>❌</span> Rechazo
+                                    </span>
+                                {% elif door.status == 'NOT_HOME' %}
+                                    <span class="px-2.5 py-1 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold flex items-center gap-1">
+                                        <span>📭</span> Ausente
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <!-- ACERA DERECHA (Pares) -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs font-bold text-slate-400">
+                    <span>ACERA SUR (CASAS PARES/DERECHA)</span>
+                    <span>LADO B</span>
+                </div>
+
+                {% for door in right_doors %}
+                    <div class="bg-slate-900/90 border {% if door.status == 'SALE_CLOSED' %}border-emerald-500/50 bg-emerald-950/20{% elif door.status == 'APPOINTMENT' %}border-amber-500/50 bg-amber-950/20{% elif door.status == 'REJECTED' %}border-rose-900/40 opacity-70{% elif door.status == 'NOT_HOME' %}border-slate-800 opacity-60{% elif door.status == 'IN_PROGRESS' %}border-indigo-500 ring-2 ring-indigo-500/30{% else %}border-slate-800 hover:border-slate-700{% endif %} rounded-2xl p-4 transition-all duration-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-3">
+                                <span class="text-2xl">{{ door.house_facade|slice:":2" }}</span>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-mono font-bold text-slate-400">#{{ door.door_number }}</span>
+                                        <h3 class="text-sm font-bold text-white">{{ door.resident_name }}</h3>
+                                    </div>
+                                    <p class="text-[11px] text-slate-400">{{ door.house_facade|slice:"2:" }}</p>
+                                </div>
+                            </div>
+
+                            <!-- Estado / Acción -->
+                            <div>
+                                {% if door.status == 'UNVISITED' %}
+                                    <a href="{% url 'simulator:knock_door' door.id %}" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow-md shadow-indigo-600/30 transition flex items-center gap-1.5">
+                                        <span>🔔</span> Tocar
+                                    </a>
+                                {% elif door.status == 'IN_PROGRESS' %}
+                                    <a href="{% url 'simulator:door_encounter' door.id %}" class="px-3 py-1.5 rounded-xl bg-indigo-500/20 border border-indigo-500/40 text-indigo-300 text-xs font-bold transition flex items-center gap-1.5 animate-pulse">
+                                        <span>💬</span> Hablar
+                                    </a>
+                                {% elif door.status == 'SALE_CLOSED' %}
+                                    <span class="px-3 py-1 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-xs font-bold flex items-center gap-1">
+                                        <span>🎉</span> Venta
+                                    </span>
+                                {% elif door.status == 'APPOINTMENT' %}
+                                    <span class="px-3 py-1 rounded-xl bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center gap-1">
+                                        <span>📅</span> Cita
+                                    </span>
+                                {% elif door.status == 'REJECTED' %}
+                                    <span class="px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-semibold flex items-center gap-1">
+                                        <span>❌</span> Rechazo
+                                    </span>
+                                {% elif door.status == 'NOT_HOME' %}
+                                    <span class="px-2.5 py-1 rounded-xl bg-slate-800 text-slate-400 text-xs font-semibold flex items-center gap-1">
+                                        <span>📭</span> Ausente
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

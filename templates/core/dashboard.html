@@ -1,0 +1,337 @@
+{% extends 'base.html' %}
+
+{% block title %}Cuartel General - Simulador de Prospección Comercial{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+
+    <!-- Hero / Perfil del Vendedor -->
+    <div class="bg-gradient-to-r from-slate-900 via-slate-900 to-indigo-950/40 p-6 md:p-8 rounded-2xl border border-slate-800 shadow-xl relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl select-none">🎯</div>
+        
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+            <div class="flex items-center space-x-5">
+                <div class="w-20 h-20 rounded-2xl bg-indigo-600/20 border-2 border-indigo-500/40 flex items-center justify-center text-4xl shadow-inner">
+                    {{ profile.avatar_emoji }}
+                </div>
+                <div>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl md:text-3xl font-extrabold text-white tracking-tight">{{ profile.name }}</h1>
+                        <span class="px-3 py-1 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-bold uppercase tracking-wider">
+                            Nivel {{ profile.level }}
+                        </span>
+                    </div>
+                    <p class="text-slate-400 text-sm mt-1">Especialista en Venta Directa & Prospección en Frío</p>
+                    
+                    <!-- Barra de Experiencia -->
+                    <div class="mt-3 w-64 md:w-80">
+                        <div class="flex justify-between text-xs text-slate-400 mb-1">
+                            <span>Progreso de XP</span>
+                            <span>{{ profile.xp }} / {{ xp_to_next_level }} XP</span>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-2.5 overflow-hidden border border-slate-700/50">
+                            <div class="bg-indigo-500 h-2.5 rounded-full transition-all duration-500" style="width: {{ xp_progress_pct }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Caja de Comisiones Acumuladas -->
+            <div class="bg-slate-950/70 border border-slate-800 p-4 rounded-xl flex items-center gap-4">
+                <div class="p-3 bg-emerald-500/20 rounded-lg text-emerald-400 text-2xl border border-emerald-500/30">
+                    💰
+                </div>
+                <div>
+                    <span class="text-xs text-slate-400 font-medium">Comisiones de Campo</span>
+                    <div class="text-2xl font-black text-emerald-400">${{ profile.cash_earned|floatformat:2 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Habilidades y Estadísticas de Carrera -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Matriz de Habilidades RPG del Vendedor -->
+        <div class="lg:col-span-1 bg-slate-900/80 p-6 rounded-2xl border border-slate-800 flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <span>⚡</span> Atributos de Ventas
+                    </h2>
+                    <span class="text-xs text-slate-400">Entrenamiento: $300</span>
+                </div>
+                <p class="text-xs text-slate-400 mb-5">
+                    Mejora tus habilidades invirtiendo comisiones para superar las objeciones más difíciles en la calle.
+                </p>
+
+                <div class="space-y-4">
+                    <!-- Empatía -->
+                    <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800/80">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm">👂</span>
+                                <span class="text-xs font-semibold text-slate-200">Empatía y Escucha</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-indigo-400">{{ profile.empathy }}/10</span>
+                                {% if profile.empathy < 10 and profile.cash_earned >= 300 %}
+                                <form method="POST" action="{% url 'core:upgrade_skill' 'empathy' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-[10px] text-white font-bold transition">+1</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5">
+                            <div class="bg-blue-400 h-1.5 rounded-full" style="width: {{ profile.empathy }}0%"></div>
+                        </div>
+                        <span class="text-[10px] text-slate-500 mt-1 block">Reduce la desconfianza del prospecto en apertura.</span>
+                    </div>
+
+                    <!-- Persuasión -->
+                    <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800/80">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm">🗣️</span>
+                                <span class="text-xs font-semibold text-slate-200">Persuasión & Objeciones</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-amber-400">{{ profile.persuasion }}/10</span>
+                                {% if profile.persuasion < 10 and profile.cash_earned >= 300 %}
+                                <form method="POST" action="{% url 'core:upgrade_skill' 'persuasion' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-2 py-0.5 rounded bg-amber-600 hover:bg-amber-500 text-[10px] text-white font-bold transition">+1</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5">
+                            <div class="bg-amber-400 h-1.5 rounded-full" style="width: {{ profile.persuasion }}0%"></div>
+                        </div>
+                        <span class="text-[10px] text-slate-500 mt-1 block">Aumenta el impacto positivo al rebatir excusas.</span>
+                    </div>
+
+                    <!-- Resiliencia -->
+                    <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800/80">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm">🛡️</span>
+                                <span class="text-xs font-semibold text-slate-200">Resiliencia Emocional</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-rose-400">{{ profile.resilience }}/10</span>
+                                {% if profile.resilience < 10 and profile.cash_earned >= 300 %}
+                                <form method="POST" action="{% url 'core:upgrade_skill' 'resilience' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-2 py-0.5 rounded bg-rose-600 hover:bg-rose-500 text-[10px] text-white font-bold transition">+1</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5">
+                            <div class="bg-rose-400 h-1.5 rounded-full" style="width: {{ profile.resilience }}0%"></div>
+                        </div>
+                        <span class="text-[10px] text-slate-500 mt-1 block">Protege tu moral y energía ante rechazos hostiles.</span>
+                    </div>
+
+                    <!-- Cierre -->
+                    <div class="bg-slate-950/50 p-3 rounded-xl border border-slate-800/80">
+                        <div class="flex justify-between items-center mb-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm">✍️</span>
+                                <span class="text-xs font-semibold text-slate-200">Técnica de Cierre</span>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs font-bold text-emerald-400">{{ profile.closing_skill }}/10</span>
+                                {% if profile.closing_skill < 10 and profile.cash_earned >= 300 %}
+                                <form method="POST" action="{% url 'core:upgrade_skill' 'closing_skill' %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="px-2 py-0.5 rounded bg-emerald-600 hover:bg-emerald-500 text-[10px] text-white font-bold transition">+1</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="w-full bg-slate-800 rounded-full h-1.5">
+                            <div class="bg-emerald-400 h-1.5 rounded-full" style="width: {{ profile.closing_skill }}0%"></div>
+                        </div>
+                        <span class="text-[10px] text-slate-500 mt-1 block">Convierte prospectos tibios en contratos firmados.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-4 border-t border-slate-800/80 flex justify-between items-center">
+                <span class="text-[11px] text-slate-500">¿Deseas reiniciar partida?</span>
+                <form method="POST" action="{% url 'core:reset_career' %}" onsubmit="return confirm('¿Seguro que deseas reiniciar tu progreso y volver a Nivel 1?');">
+                    {% csrf_token %}
+                    <button type="submit" class="text-xs text-rose-400/80 hover:text-rose-300 underline transition">Reiniciar Carrera</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- KPIs Históricos de Campo -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-slate-900/80 p-6 rounded-2xl border border-slate-800">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <span>📊</span> Estadísticas de Campo Acumuladas
+                </h2>
+                
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-center">
+                        <span class="text-xs text-slate-400 block mb-1">Puertas Tocadas</span>
+                        <span class="text-2xl font-black text-white">{{ profile.total_doors_knocked }}</span>
+                    </div>
+                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-center">
+                        <span class="text-xs text-slate-400 block mb-1">Puertas Abiertas</span>
+                        <span class="text-2xl font-black text-indigo-400">{{ profile.total_doors_opened }}</span>
+                    </div>
+                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-center">
+                        <span class="text-xs text-slate-400 block mb-1">Citas Agendadas</span>
+                        <span class="text-2xl font-black text-amber-400">{{ profile.total_appointments }}</span>
+                    </div>
+                    <div class="bg-slate-950/60 p-4 rounded-xl border border-slate-800 text-center">
+                        <span class="text-xs text-slate-400 block mb-1">Ventas Cerradas</span>
+                        <span class="text-2xl font-black text-emerald-400">{{ profile.total_sales }}</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-800">
+                    <div class="flex items-center justify-between sm:justify-start sm:gap-3">
+                        <span class="text-xs text-slate-400">Tasa de Conversión:</span>
+                        <span class="text-sm font-bold text-indigo-300">{{ profile.conversion_rate }}%</span>
+                    </div>
+                    <div class="flex items-center justify-between sm:justify-start sm:gap-3">
+                        <span class="text-xs text-slate-400">Objeciones Resueltas:</span>
+                        <span class="text-sm font-bold text-slate-200">{{ profile.total_objections_handled }}</span>
+                    </div>
+                    <div class="flex items-center justify-between sm:justify-start sm:gap-3">
+                        <span class="text-xs text-slate-400">Días Trabajados:</span>
+                        <span class="text-sm font-bold text-slate-200">{{ profile.total_days_worked }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historial de Jornadas Recientes -->
+            <div class="bg-slate-900/80 p-6 rounded-2xl border border-slate-800">
+                <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                    <span>📜</span> Últimas Jornadas Realizadas
+                </h2>
+
+                {% if recent_days %}
+                    <div class="space-y-3">
+                        {% for day in recent_days %}
+                            <div class="flex items-center justify-between p-3.5 bg-slate-950/60 rounded-xl border border-slate-800/80 hover:border-slate-700 transition">
+                                <div class="flex items-center space-x-3">
+                                    <span class="text-2xl">{{ day.product.icon_emoji }}</span>
+                                    <div>
+                                        <div class="text-sm font-bold text-white">{{ day.neighborhood.name }}</div>
+                                        <div class="text-xs text-slate-400">{{ day.product.name }} • {{ day.completed_at|date:"d M Y, H:i" }}</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-4">
+                                    <div class="text-right">
+                                        <span class="text-xs font-semibold text-emerald-400">+${{ day.earnings|floatformat:2 }}</span>
+                                        <div class="text-[10px] text-slate-400">{{ day.sales_closed }} ventas | {{ day.appointments_booked }} citas</div>
+                                    </div>
+                                    <a href="{% url 'simulator:day_summary' day.id %}" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition">
+                                        Ver Feedback
+                                    </a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="p-6 text-center text-slate-500 bg-slate-950/40 rounded-xl border border-dashed border-slate-800">
+                        <span class="text-3xl block mb-2">🚶‍♂️</span>
+                        Aún no has completado ninguna jornada. Selecciona una campaña abajo y sal a prospectar.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- PLANIFICADOR DE NUEVA JORNADA -->
+    <div class="bg-slate-900/90 p-6 md:p-8 rounded-2xl border border-indigo-500/30 shadow-2xl relative">
+        <div class="max-w-3xl mb-6">
+            <h2 class="text-2xl font-black text-white flex items-center gap-3">
+                <span class="p-2 bg-indigo-600 rounded-xl text-white">🚀</span>
+                Iniciar Nueva Jornada de Prospección en Campo
+            </h2>
+            <p class="text-slate-400 text-sm mt-1">
+                Elige qué producto vas a ofrecer y el vecindario donde tocarás puertas hoy.
+            </p>
+        </div>
+
+        <form method="POST" action="{% url 'simulator:start_day' %}" class="space-y-8">
+            {% csrf_token %}
+
+            <!-- Paso 1: Seleccionar Producto / Campaña -->
+            <div>
+                <label class="block text-sm font-bold text-slate-200 mb-3 uppercase tracking-wider text-xs">
+                    Paso 1: ¿Qué vas a vender hoy? (Campaña y Producto)
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {% for p in products %}
+                        <label class="relative flex flex-col p-4 bg-slate-950/80 border border-slate-800 rounded-xl cursor-pointer hover:border-indigo-500/60 transition group has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-950/20 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500/30">
+                            <input type="radio" name="product_id" value="{{ p.id }}" class="sr-only" {% if forloop.first %}checked{% endif %}>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-3xl">{{ p.icon_emoji }}</span>
+                                <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase {% if p.category == 'RESIDENTIAL' %}bg-blue-500/20 text-blue-300 border border-blue-500/30{% else %}bg-purple-500/20 text-purple-300 border border-purple-500/30{% endif %}">
+                                    {{ p.get_category_display }}
+                                </span>
+                            </div>
+                            <h3 class="text-sm font-bold text-white group-hover:text-indigo-300 transition">{{ p.name }}</h3>
+                            <p class="text-xs text-slate-400 mt-1 line-clamp-2">{{ p.tagline }}</p>
+                            
+                            <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs">
+                                <span class="text-slate-500">Comisión venta:</span>
+                                <span class="font-bold text-emerald-400">+${{ p.commission_per_sale|floatformat:0 }}</span>
+                            </div>
+                            <div class="flex justify-between items-center text-[11px] mt-1 text-slate-400">
+                                <span>Por cita:</span>
+                                <span class="font-semibold text-amber-300">+${{ p.commission_per_appointment|floatformat:0 }}</span>
+                            </div>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Paso 2: Seleccionar Vecindario / Calle -->
+            <div>
+                <label class="block text-sm font-bold text-slate-200 mb-3 uppercase tracking-wider text-xs">
+                    Paso 2: ¿Dónde vas a tocar puertas? (Zona y Dificultad)
+                </label>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {% for n in neighborhoods %}
+                        <label class="relative flex flex-col p-4 bg-slate-950/80 border border-slate-800 rounded-xl cursor-pointer hover:border-indigo-500/60 transition group has-[:checked]:border-indigo-500 has-[:checked]:bg-indigo-950/20 has-[:checked]:ring-2 has-[:checked]:ring-indigo-500/30">
+                            <input type="radio" name="neighborhood_id" value="{{ n.id }}" class="sr-only" {% if forloop.first %}checked{% endif %}>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold px-2 py-0.5 rounded-full {% if n.difficulty == 'Fácil' %}bg-emerald-500/20 text-emerald-300 border border-emerald-500/30{% elif n.difficulty == 'Intermedio' %}bg-amber-500/20 text-amber-300 border border-amber-500/30{% else %}bg-rose-500/20 text-rose-300 border border-rose-500/30{% endif %}">
+                                    {{ n.difficulty }}
+                                </span>
+                                <span class="text-xs text-slate-400 font-semibold">{{ n.door_count }} puertas</span>
+                            </div>
+                            <h3 class="text-base font-bold text-white group-hover:text-indigo-300 transition">{{ n.name }}</h3>
+                            <p class="text-xs text-slate-400 mt-1 line-clamp-3">{{ n.description }}</p>
+
+                            <div class="mt-4 pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs text-slate-400">
+                                <span>Apertura de puerta:</span>
+                                <span class="font-bold text-indigo-400">{{ n.open_rate }}% prob.</span>
+                            </div>
+                        </label>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Botón de Lanzamiento -->
+            <div class="flex justify-end pt-4">
+                <button type="submit" class="w-full md:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-emerald-600 hover:from-indigo-500 hover:to-emerald-500 text-white font-extrabold text-base shadow-lg shadow-indigo-600/30 transition transform hover:-translate-y-0.5 flex items-center justify-center gap-3">
+                    <span class="text-xl">🚪</span>
+                    <span>¡Salir a la Calle a Prospectar Ahora!</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

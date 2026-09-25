@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Encuentro en Puerta #{{ door.door_number }} - {{ day.neighborhood.name }}{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+    <!-- Navegación de retorno y contexto de la puerta -->
+    <div class="flex items-center justify-between">
+        <a href="{% url 'simulator:street_view' day.id %}" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition">
+            <span>←</span> Volver a la vista de la calle
+        </a>
+        <div class="flex items-center gap-4 text-xs">
+            <span class="text-slate-400">Energía: <strong class="text-white">{{ day.energy }}%</strong></span>
+            <span class="text-slate-400">Moral: <strong class="text-white">{{ day.morale }}%</strong></span>
+            <span class="text-slate-400">Hora: <strong class="text-white">{{ day.current_time_str }}</strong></span>
+        </div>
+    </div>
+
+    <!-- Contenedor dinámico HTMX -->
+    <div id="dialog-container">
+        {% include 'simulator/door_dialog_fragment.html' %}
+    </div>
+
+</div>
+{% endblock %}
