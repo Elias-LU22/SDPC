@@ -365,14 +365,12 @@ const VoiceIntercom = (function() {
         }
 
         if (listening) {
-            btn.classList.remove('bg-slate-800', 'text-slate-300', 'hover:bg-slate-700');
-            btn.classList.add('bg-rose-600', 'text-white', 'hover:bg-rose-500', 'ring-2', 'ring-rose-400', 'ring-offset-2', 'ring-offset-slate-900');
+            btn.className = 'w-11 h-11 rounded-2xl bg-rose-500 text-white shadow-lg shadow-rose-900/50 ring-2 ring-rose-400 ring-offset-2 ring-offset-slate-950 flex items-center justify-center flex-shrink-0 transition-all';
             btn.title = 'Escuchando tu voz... Clic para detener';
             if (iconMic) iconMic.classList.add('hidden');
             if (iconPulse) iconPulse.classList.remove('hidden');
         } else {
-            btn.classList.remove('bg-rose-600', 'text-white', 'hover:bg-rose-500', 'ring-2', 'ring-rose-400', 'ring-offset-2', 'ring-offset-slate-900');
-            btn.classList.add('bg-slate-800', 'text-slate-300', 'hover:bg-slate-700');
+            btn.className = 'w-11 h-11 rounded-2xl liquid-pill text-slate-300 hover:text-white flex items-center justify-center flex-shrink-0 transition-all';
             btn.title = 'Activar micrófono para hablar';
             if (iconMic) iconMic.classList.remove('hidden');
             if (iconPulse) iconPulse.classList.add('hidden');
@@ -385,13 +383,11 @@ const VoiceIntercom = (function() {
         const btn = document.getElementById('toggle-handsfree-btn');
         if (btn) {
             if (isHandsFree) {
-                btn.classList.remove('bg-slate-800', 'text-slate-400');
-                btn.classList.add('bg-teal-950', 'text-teal-300', 'border-teal-600/40');
+                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-teal-300 border-teal-500/30 bg-teal-950/40 text-xs font-medium';
                 btn.textContent = 'Manos Libres: Activo';
                 updateStatusBadge('Modo Manos Libres encendido', 'teal');
             } else {
-                btn.classList.remove('bg-teal-950', 'text-teal-300', 'border-teal-600/40');
-                btn.classList.add('bg-slate-800', 'text-slate-400');
+                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-slate-400 border-white/5 bg-white/5 text-xs font-medium';
                 btn.textContent = 'Manos Libres: Manual';
                 updateStatusBadge('Modo Manual (Usa el botón de micrófono)', 'slate');
                 stopListening();
@@ -408,20 +404,20 @@ const VoiceIntercom = (function() {
                 window.speechSynthesis.cancel();
                 isSpeaking = false;
                 setWaveVisualizer(false, 'idle');
-                btn.classList.add('text-rose-400', 'border-rose-800');
+                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-rose-300 border-rose-500/30 bg-rose-950/40 text-xs font-medium flex items-center gap-1.5';
                 btn.innerHTML = `
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
                     </svg>
                     <span>Voz Silenciada</span>
                 `;
                 updateStatusBadge('Voz apagada', 'slate');
             } else {
-                btn.classList.remove('text-rose-400', 'border-rose-800');
+                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-slate-300 hover:text-white transition flex items-center gap-1.5 text-xs';
                 btn.innerHTML = `
-                    <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+                    <svg class="w-3.5 h-3.5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
                     </svg>
                     <span>Voz Activa</span>
                 `;
