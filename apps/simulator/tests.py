@@ -1,191 +1,109 @@
+import re
 from django.test import TestCase, Client
 from django.urls import reverse
-from apps.core.models import ProspectorProfile
-from apps.simulator.models import Product, Neighborhood, SimulationDay, Door, DoorInteractionLog
-from apps.simulator.engine import create_simulation_day, knock_door, process_dialogue_step, finish_simulation_day
+from apps.simulator.chat_engine import create_new_door, evaluate_response, ARCHETYPE_DETAILS
 
 
-class ProspectorSimulatorTests(TestCase):
+class SingleScreenChatSimulatorTests(TestCase):
     def setUp(self):
         self.client = Client()
-        self.profile = ProspectorProfile.get_or_create_default()
-        self.product = Product.objects.create(
-            name="Fibra Test",
-            category="RESIDENTIAL",
-            tagline="Test Internet",
-            description="Fibra de prueba",
-            commission_per_sale=500.0,
-            commission_per_appointment=100.0,
-            icon_emoji="🚀"
-        )
-        self.neighborhood = Neighborhood.objects.create(
-            name="Barrio Test",
-            target_type="RESIDENTIAL",
-            description="Zona de prueba",
-            door_count=6,
-            open_rate=80,
-            economic_level="Medio",
-            difficulty="Fácil"
-        )
 
-    def test_profile_xp_and_level_up(self):
-        self.assertEqual(self.profile.level, 1)
-        self.assertEqual(self.profile.xp, 0)
-        
-        # Agregar 160 XP (nivel 1 requiere 150)
-        leveled_up = self.profile.add_xp(160)
-        self.assertTrue(leveled_up)
-        self.assertEqual(self.profile.level, 2)
-        self.assertEqual(self.profile.xp, 10)
+    def test_create_new_door_structure(self):
+        door = create_new_door()
+        self.assertIn('door_number', door)
+        self.assertIn('resident_name', door)
+        self.assertIn('archetype', door)
+        self.assertIn('patience', door)
+        self.assertIn('interest', door)
+        self.assertEqual(door['status'], 'IN_PROGRESS')
+        self.assertEqual(len(door['messages']), 1)
+        self.assertEqual(door['messages'][0]['sender'], 'prospect')
 
-    def test_create_simulation_day_generates_doors(self):
-        day = create_simulation_day(self.profile, self.neighborhood, self.product)
-        self.assertIsNotNone(day.id)
-        self.assertEqual(day.doors.count(), 6)
-        self.assertEqual(day.energy, 100)
-        self.assertEqual(day.morale, 100)
-        
-        # Comprobar que hay casas en ambos lados
-        left_doors = day.doors.filter(street_side='LEFT').count()
-        right_doors = day.doors.filter(street_side='RIGHT').count()
-        self.assertGreater(left_doors, 0)
-        self.assertGreater(right_doors, 0)
+    def test_evaluate_response_busy_archetype(self):
+        door = create_new_door()
+        door['archetype'] = 'BUSY'
+        door['patience'] = 50
+        door['interest'] = 20
+        door['turn'] = 1
 
-    def test_knock_door_flow(self):
-        day = create_simulation_day(self.profile, self.neighborhood, self.product)
-        door = day.doors.first()
-        self.assertEqual(door.status, 'UNVISITED')
-        
-        knocked_door = knock_door(door)
-        self.assertIn(knocked_door.status, ['IN_PROGRESS', 'NOT_HOME'])
-        day.refresh_from_db()
-        self.assertEqual(day.doors_knocked, 1)
-        self.assertLess(day.energy, 100)
+        # Probar respuesta con gancho de 15 segundos sobre aire acondicionado y TXU Season Pass
+        updated_door = evaluate_response("Solo le robo 15 segundos: con este calor TXU le da 50% de descuento en verano con Season Pass.", door)
+        self.assertGreater(updated_door['interest'], 20)
+        self.assertEqual(len(updated_door['messages']), 3)
+        self.assertEqual(updated_door['messages'][1]['sender'], 'user')
+        self.assertEqual(updated_door['messages'][2]['sender'], 'prospect')
+        self.assertIsNotNone(updated_door['messages'][2]['coach'])
 
-    def test_process_dialogue_step(self):
-        day = create_simulation_day(self.profile, self.neighborhood, self.product)
-        door = day.doors.first()
-        # Forzar un arquetipo conocido
-        door.archetype = 'BUSY'
-        door.current_node = 'start'
-        door.status = 'IN_PROGRESS'
-        door.save()
+    def test_chat_view_loads_clean_ui(self):
+        response = self.client.get(reverse('simulator:chat_view'))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Puerta #')
+        self.assertContains(response, 'Paciencia')
+        self.assertContains(response, 'Interés')
+        self.assertContains(response, 'Siguiente Puerta')
 
-        # Probar opción efectiva
-        res = process_dialogue_step(door, 'opt_1_good')
-        door.refresh_from_db()
-        self.assertEqual(res['next_node_id'], 'busy_hooked')
-        self.assertEqual(door.current_node, 'busy_hooked')
-        self.assertGreater(door.interest, 25)
-        self.assertEqual(len(door.dialogue_history), 1)
-        self.assertEqual(DoorInteractionLog.objects.filter(door=door).count(), 1)
+        # Verificar que no contenga emojis comunes
+        content = response.content.decode('utf-8')
+        emoji_pattern = re.compile(r'[\U00010000-\U0010ffff]', flags=re.UNICODE)
+        self.assertFalse(bool(emoji_pattern.search(content)), "No deben existir emojis en la interfaz.")
 
-    def test_successful_sale_outcome(self):
-        day = create_simulation_day(self.profile, self.neighborhood, self.product)
-        door = day.doors.first()
-        door.archetype = 'IDEAL_LEAD'
-        door.current_node = 'ideal_shared_pain'
-        door.status = 'IN_PROGRESS'
-        door.save()
-
-        # Seleccionar cierre directo
-        res = process_dialogue_step(door, 'opt_ideal_direct_close')
-        door.refresh_from_db()
-        day.refresh_from_db()
-        self.profile.refresh_from_db()
-
-        self.assertEqual(door.status, 'SALE_CLOSED')
-        self.assertEqual(day.sales_closed, 1)
-        self.assertEqual(day.earnings, 500.0)
-        self.assertEqual(self.profile.total_sales, 1)
-
-    def test_finish_simulation_day(self):
-        day = create_simulation_day(self.profile, self.neighborhood, self.product)
-        day.doors_knocked = 5
-        day.doors_opened = 4
-        day.sales_closed = 1
-        day.save()
-
-        completed_day = finish_simulation_day(day)
-        self.assertTrue(completed_day.is_completed)
-        self.assertIsNotNone(completed_day.completed_at)
-        self.assertIn("Evaluación de la Jornada", completed_day.coach_summary)
-
-    def test_http_views(self):
-        # 1. Dashboard
-        resp = self.client.get(reverse('core:dashboard'))
-        self.assertEqual(resp.status_code, 200)
-
-        # 2. Iniciar Jornada
-        resp = self.client.post(reverse('simulator:start_day'), {
-            'neighborhood_id': self.neighborhood.id,
-            'product_id': self.product.id
+    def test_send_message_post_and_htmx(self):
+        # 1. Enviar mensaje estándar
+        resp = self.client.post(reverse('simulator:send_message'), {
+            'message': 'Buenas tardes, disculpe la molestia'
         }, follow=True)
         self.assertEqual(resp.status_code, 200)
-        
-        day = SimulationDay.objects.filter(profile=self.profile).last()
-        self.assertIsNotNone(day)
+        session = self.client.session
+        self.assertIn('door_state', session)
+        self.assertGreaterEqual(len(session['door_state']['messages']), 3)
 
-        # 3. Vista de Calle
-        resp = self.client.get(reverse('simulator:street_view', args=[day.id]))
-        self.assertEqual(resp.status_code, 200)
-
-        # 4. Tocar Puerta
-        door = day.doors.first()
-        resp = self.client.get(reverse('simulator:knock_door', args=[door.id]), follow=True)
-        self.assertEqual(resp.status_code, 200)
-
-        # 5. Encuentro de Puerta
-        resp = self.client.get(reverse('simulator:door_encounter', args=[door.id]))
-        self.assertEqual(resp.status_code, 200)
-
-        # 6. Petición HTMX en paso de diálogo
-        resp_htmx = self.client.post(
-            reverse('simulator:dialogue_step', args=[door.id]),
-            {'option_id': 'opt_1_good'},
-            HTTP_HX_REQUEST='true'
-        )
+        # 2. Enviar mensaje con cabecera HTMX
+        resp_htmx = self.client.post(reverse('simulator:send_message'), {
+            'message': 'Solo le robo 15 segundos para revisar su recibo de luz con TXU'
+        }, HTTP_HX_REQUEST='true')
         self.assertEqual(resp_htmx.status_code, 200)
-        self.assertContains(resp_htmx, 'Paciencia del Residente')
-        self.assertContains(resp_htmx, 'Interés Comercial')
+        self.assertContains(resp_htmx, 'Análisis del Coach Comercial')
 
-        # 7. Finalizar Jornada
-        resp = self.client.post(reverse('simulator:finish_day', args=[day.id]), follow=True)
-        self.assertEqual(resp.status_code, 200)
+    def test_next_door_and_reset(self):
+        # Cargar primera puerta
+        self.client.get(reverse('simulator:chat_view'))
+        first_door_num = self.client.session['door_state']['door_number']
 
-        # 8. Resumen de Jornada
-        resp = self.client.get(reverse('simulator:day_summary', args=[day.id]))
-        self.assertEqual(resp.status_code, 200)
+        # Enviar un mensaje
+        self.client.post(reverse('simulator:send_message'), {'message': 'Hola'})
+        self.assertEqual(len(self.client.session['door_state']['messages']), 3)
 
-    def test_skill_upgrade_with_cash(self):
-        self.profile.cash_earned = 400.00
-        self.profile.save()
-        initial_empathy = self.profile.empathy
+        # Reiniciar chat de la puerta actual
+        self.client.post(reverse('simulator:reset_chat'))
+        self.assertEqual(len(self.client.session['door_state']['messages']), 1)
 
-        resp = self.client.post(reverse('core:upgrade_skill', args=['empathy']), follow=True)
-        self.assertEqual(resp.status_code, 200)
-        self.profile.refresh_from_db()
-        self.assertEqual(self.profile.empathy, initial_empathy + 1)
-        self.assertEqual(self.profile.cash_earned, 100.00)
+        # Siguiente puerta
+        self.client.post(reverse('simulator:next_door'))
+        self.assertEqual(len(self.client.session['door_state']['messages']), 1)
 
-    def test_skill_upgrade_insufficient_cash(self):
-        self.profile.cash_earned = 50.00
-        self.profile.save()
-        initial_empathy = self.profile.empathy
-
-        resp = self.client.post(reverse('core:upgrade_skill', args=['empathy']), follow=True)
-        self.assertEqual(resp.status_code, 200)
-        self.profile.refresh_from_db()
-        self.assertEqual(self.profile.empathy, initial_empathy)
-        self.assertEqual(self.profile.cash_earned, 50.00)
-
-    def test_reset_career(self):
-        self.profile.level = 5
-        self.profile.cash_earned = 1500.00
-        self.profile.save()
-
-        resp = self.client.post(reverse('core:reset_career'), follow=True)
-        self.assertEqual(resp.status_code, 200)
-        self.profile.refresh_from_db()
-        self.assertEqual(self.profile.level, 1)
-        self.assertEqual(self.profile.cash_earned, 0.00)
+    def test_all_nine_archetypes_handled(self):
+        from apps.simulator.chat_engine import evaluate_response_local
+        expected_archetypes = [
+            "BUSY", "SKEPTICAL", "POLITE_EVASIVE", "HOSTILE", "IDEAL_LEAD",
+            "BARGAIN_HUNTER", "NON_DECISION_MAKER", "LOYALIST", "TECH_SAVVY"
+        ]
+        for arch in expected_archetypes:
+            self.assertIn(arch, ARCHETYPE_DETAILS)
+            mock_door = {
+                "door_number": 100,
+                "resident_name": "Test User",
+                "resident_role": "Residente",
+                "archetype": arch,
+                "archetype_title": ARCHETYPE_DETAILS[arch]["title"],
+                "archetype_description": ARCHETYPE_DETAILS[arch]["description"],
+                "patience": 50,
+                "interest": 30,
+                "status": "IN_PROGRESS",
+                "turn": 1,
+                "messages": [{"sender": "prospect", "text": "Hola", "coach": None}],
+                "suggestions": []
+            }
+            res = evaluate_response_local("Tenemos el plan TXU Season Pass a 12.8 centavos por kWh con 50% de descuento en verano", mock_door)
+            self.assertIsNotNone(res)
+            self.assertGreaterEqual(len(res["messages"]), 3)
+            self.assertTrue(bool(res["messages"][-1]["coach"]))

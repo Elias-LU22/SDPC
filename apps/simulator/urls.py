@@ -4,11 +4,8 @@ from . import views
 app_name = 'simulator'
 
 urlpatterns = [
-    path('start/', views.start_day, name='start_day'),
-    path('day/<int:day_id>/', views.street_view, name='street_view'),
-    path('door/<int:door_id>/knock/', views.knock_door_view, name='knock_door'),
-    path('door/<int:door_id>/', views.door_encounter, name='door_encounter'),
-    path('door/<int:door_id>/step/', views.dialogue_step_view, name='dialogue_step'),
-    path('day/<int:day_id>/finish/', views.finish_day, name='finish_day'),
-    path('day/<int:day_id>/summary/', views.day_summary, name='day_summary'),
+    path('', views.chat_view, name='chat_view'),
+    path('send/', views.send_message, name='send_message'),
+    path('next/', views.next_door, name='next_door'),
+    path('reset/', views.reset_chat, name='reset_chat'),
 ]

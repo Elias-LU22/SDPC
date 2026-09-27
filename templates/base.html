@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Simulador de Prospección Comercial{% endblock %}</title>
+    <title>{% block title %}TXU Energy - Simulador de Prospección Comercial{% endblock %}</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -11,14 +11,18 @@
             theme: {
                 extend: {
                     colors: {
-                        brand: {
-                            50: '#eef2ff',
-                            100: '#e0e7ff',
-                            400: '#818cf8',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                            900: '#312e81',
+                        teal: {
+                            50: '#f0fdfa',
+                            100: '#ccfbf1',
+                            200: '#99f6e4',
+                            300: '#5eead4',
+                            400: '#2dd4bf',
+                            500: '#14b8a6',
+                            600: '#0d9488',
+                            700: '#0f766e',
+                            800: '#115e59',
+                            900: '#134e4a',
+                            950: '#042f2e',
                         }
                     }
                 }
@@ -32,71 +36,38 @@
             width: 6px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #0f172a;
+            background: #090d16;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #334155;
+            background: #1e293b;
             border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #334155;
         }
     </style>
 </head>
-<body class="h-full flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body class="h-full flex flex-col font-sans antialiased bg-slate-950 text-slate-100" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
 
-    <!-- Barra de Navegación Superior -->
-    <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <div class="flex items-center space-x-3">
-                <a href="{% url 'core:dashboard' %}" class="flex items-center space-x-2 group">
-                    <span class="text-2xl p-2 bg-brand-600/20 rounded-xl group-hover:bg-brand-600/30 transition border border-brand-500/30">🚪</span>
-                    <div>
-                        <span class="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
-                            DoorPro <span class="text-xs px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 font-semibold">SIMULADOR</span>
-                        </span>
-                        <p class="text-[10px] text-slate-400 -mt-1">Prospección Comercial Puerta a Puerta</p>
-                    </div>
-                </a>
-            </div>
+    {% block content %}{% endblock %}
 
-            <nav class="flex items-center space-x-4">
-                {% if active_day and not active_day.is_completed %}
-                    <a href="{% url 'simulator:street_view' active_day.id %}" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition animate-pulse">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                        Jornada en curso (#{{ active_day.id }})
-                    </a>
-                {% endif %}
-                <a href="{% url 'core:dashboard' %}" class="text-sm font-medium text-slate-300 hover:text-white hover:bg-slate-800 px-3 py-1.5 rounded-lg transition">
-                    Dashboard
-                </a>
-                <div class="h-5 w-px bg-slate-800"></div>
-                <div class="flex items-center space-x-2 text-xs text-slate-300 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700/50">
-                    <span>{{ current_profile.avatar_emoji|default:"💼" }}</span>
-                    <span class="font-semibold text-slate-200">{{ current_profile.name|default:"Vendedor" }}</span>
-                    <span class="text-brand-400 font-bold">Nvl. {{ current_profile.level|default:1 }}</span>
-                </div>
-            </nav>
-        </div>
-    </header>
+    <script>
+        function scrollChatToBottom() {
+            const chatStream = document.getElementById('chat-stream');
+            if (chatStream) {
+                chatStream.scrollTop = chatStream.scrollHeight;
+            }
+        }
 
-    <!-- Contenido Principal -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {% if messages %}
-            <div class="mb-6 space-y-2">
-                {% for message in messages %}
-                    <div class="p-4 rounded-xl border text-sm flex items-center justify-between {% if message.tags == 'error' %}bg-rose-500/10 border-rose-500/30 text-rose-300{% elif message.tags == 'success' %}bg-emerald-500/10 border-emerald-500/30 text-emerald-300{% else %}bg-brand-500/10 border-brand-500/30 text-brand-300{% endif %}">
-                        <span>{{ message }}</span>
-                    </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        {% block content %}{% endblock %}
-    </main>
-
-    <!-- Pie de Página -->
-    <footer class="border-t border-slate-800/80 bg-slate-900/50 py-4 text-center text-xs text-slate-500">
-        <p>Simulador de Cambaceo & Prospección Comercial en Terreno • 100% Autónomo y Gratuito • Django + Tailwind CSS</p>
-    </footer>
-
-    {% block extra_js %}{% endblock %}
+        document.addEventListener('DOMContentLoaded', scrollChatToBottom);
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            scrollChatToBottom();
+            const inputField = document.getElementById('message-input');
+            if (inputField) {
+                inputField.value = '';
+                inputField.focus();
+            }
+        });
+    </script>
 </body>
 </html>
