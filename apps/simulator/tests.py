@@ -107,3 +107,94 @@ class SingleScreenChatSimulatorTests(TestCase):
             self.assertIsNotNone(res)
             self.assertGreaterEqual(len(res["messages"]), 3)
             self.assertTrue(bool(res["messages"][-1]["coach"]))
+
+    def test_resident_gender_assignment(self):
+        from apps.simulator.views import ensure_door_gender
+        door = create_new_door()
+        self.assertIn('resident_gender', door)
+        self.assertIn(door['resident_gender'], ['M', 'F'])
+
+        # Probar ensure_door_gender con sesión existente sin resident_gender
+        female_door = {'resident_name': 'Carmen Morales'}
+        updated_female = ensure_door_gender(female_door)
+        self.assertEqual(updated_female['resident_gender'], 'F')
+
+        male_door = {'resident_name': 'Roberto Garza'}
+        updated_male = ensure_door_gender(male_door)
+        self.assertEqual(updated_male['resident_gender'], 'M')
+
+    def test_chat_view_renders_gender_attribute(self):
+        response = self.client.get(reverse('simulator:chat_view'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        self.assertIn('data-gender=', content)
+        self.assertIn('data-resident=', content)
+
+    def test_create_new_door_porch_observation(self):
+        door = create_new_door()
+        self.assertIn('porch_observation', door)
+        self.assertTrue(len(door['porch_observation']) > 5)
+
+    def test_next_door_cycles_without_immediate_repetition(self):
+        self.client.get(reverse('simulator:chat_view'))
+        initial_door = self.client.session.get('door_state')
+        previous_name = initial_door['resident_name']
+        previous_arch = initial_door['archetype']
+
+        # Cycle through 5 consecutive doors
+        for _ in range(5):
+            resp = self.client.post(reverse('simulator:next_door'), HTTP_HX_REQUEST='true')
+            self.assertEqual(resp.status_code, 200)
+            current_door = self.client.session.get('door_state')
+            # Check resident name did not immediately repeat
+            self.assertNotEqual(current_door['resident_name'], previous_name)
+            # Check archetype did not immediately repeat
+            self.assertNotEqual(current_door['archetype'], previous_arch)
+            # Check door number advanced
+            self.assertGreater(current_door['door_number'], initial_door['door_number'])
+            previous_name = current_door['resident_name']
+            previous_arch = current_door['archetype']
+
+    def test_evaluate_response_flexible_rapport_and_greeting(self):
+        from apps.simulator.chat_engine import evaluate_response_local
+        door = create_new_door()
+        door['patience'] = 60
+        door['interest'] = 20
+        door['turn'] = 1
+
+        # Test greeting and rapport without harsh patience drop
+        greeting_text = "Buenas tardes vecino, que tenga un excelente dia. Disculpe la molestia, solo queria saludarlo."
+        updated = evaluate_response_local(greeting_text, door)
+        self.assertGreaterEqual(updated['patience'], 60, "El saludo educado no debe penalizar la paciencia.")
+        self.assertGreater(updated['interest'], 20, "El saludo cordial debe generar ligera empatia.")
+
+        # Test open question
+        question_door = create_new_door()
+        question_door['patience'] = 50
+        question_door['interest'] = 25
+        question_door['turn'] = 1
+        q_text = "Entiendo perfectamente su punto. Me gustaria saber, como ha sentido el cobro de la luz este verano?"
+        updated_q = evaluate_response_local(q_text, question_door)
+        self.assertGreaterEqual(updated_q['patience'], 50, "Las preguntas abiertas no deben derrumbar la paciencia.")
+
+    def test_svg_logo_and_light_mode_default(self):
+        response = self.client.get(reverse('simulator:chat_view'))
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+
+        # Verificar que el logo SVG está en el DOM
+        self.assertIn('txu_door_logo.svg', content, "El logo SVG personalizado debe estar en la interfaz.")
+        self.assertIn('Logo TXU Energy Puerta a Puerta', content)
+
+        # Verificar controles de modo claro / modo oscuro
+        self.assertIn('id="theme-toggle-btn"', content)
+        self.assertIn('id="theme-icon-sun"', content)
+        self.assertIn('id="theme-icon-moon"', content)
+        self.assertIn('Modo Claro', content)
+
+        # Verificar que por defecto la etiqueta HTML no tiene la clase dark (Modo Claro predeterminado)
+        self.assertIn('<html lang="es" class="h-full antialiased">', content)
+        self.assertNotIn('<html lang="es" class="h-full antialiased dark">', content)
+
+
+

@@ -2,6 +2,25 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from .chat_engine import create_new_door, evaluate_response
 
+FEMALE_NAMES = {"Carmen Morales", "Patricia Ortiz", "Andrea Salazar", "Beatriz Luna", "Elena Ramos", "Valeria Ríos"}
+
+
+def ensure_door_gender(door_state):
+    """
+    Garantiza que door_state contenga el género ('M' o 'F') asignado
+    para el prospecto de la puerta, incluso en sesiones existentes.
+    """
+    if not door_state or not isinstance(door_state, dict):
+        return door_state
+
+    if not door_state.get('resident_gender'):
+        resident_name = door_state.get('resident_name', '')
+        if resident_name in FEMALE_NAMES:
+            door_state['resident_gender'] = 'F'
+        else:
+            door_state['resident_gender'] = 'M'
+    return door_state
+
 
 def chat_view(request):
     """
@@ -11,6 +30,9 @@ def chat_view(request):
     door_state = request.session.get('door_state')
     if not door_state:
         door_state = create_new_door()
+        request.session['door_state'] = door_state
+    else:
+        door_state = ensure_door_gender(door_state)
         request.session['door_state'] = door_state
 
     return render(request, 'chat.html', {'door': door_state})
@@ -26,9 +48,12 @@ def send_message(request):
         door_state = request.session.get('door_state')
         if not door_state:
             door_state = create_new_door()
+        else:
+            door_state = ensure_door_gender(door_state)
 
         if user_message and door_state.get('status') == 'IN_PROGRESS':
             door_state = evaluate_response(user_message, door_state)
+            door_state = ensure_door_gender(door_state)
             request.session['door_state'] = door_state
             request.session.modified = True
 
@@ -40,11 +65,35 @@ def send_message(request):
 
 def next_door(request):
     """
-    Cambia a una nueva puerta y prospecto al azar, limpiando el chat anterior.
+    Cambia a una nueva puerta garantizando diversidad en residentes y temas,
+    sin repetir el prospecto ni el arquetipo inmediato anterior.
     """
-    door_state = create_new_door()
-    request.session['door_state'] = door_state
+    door_state = request.session.get('door_state', {})
+    current_name = door_state.get('resident_name') if isinstance(door_state, dict) else None
+    current_archetype = door_state.get('archetype') if isinstance(door_state, dict) else None
+    current_door_num = door_state.get('door_number') if isinstance(door_state, dict) else None
+
+    visited_residents = request.session.get('visited_residents', [])
+    if current_name and current_name not in visited_residents:
+        visited_residents.append(current_name)
+
+    new_door = create_new_door(
+        exclude_name=current_name,
+        exclude_archetype=current_archetype,
+        visited_names=visited_residents,
+        current_door_num=current_door_num
+    )
+
+    if new_door['resident_name'] not in visited_residents:
+        visited_residents.append(new_door['resident_name'])
+
+    request.session['visited_residents'] = visited_residents
+    request.session['door_state'] = new_door
     request.session.modified = True
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'chat_content.html', {'door': new_door})
+
     return redirect('simulator:chat_view')
 
 
@@ -54,12 +103,14 @@ def reset_chat(request):
     """
     door_state = request.session.get('door_state')
     if door_state:
+        door_state = ensure_door_gender(door_state)
         from .chat_engine import ARCHETYPE_DETAILS
         archetype_data = ARCHETYPE_DETAILS[door_state["archetype"]]
         door_state["patience"] = archetype_data["initial_patience"]
         door_state["interest"] = archetype_data["initial_interest"]
         door_state["status"] = "IN_PROGRESS"
         door_state["turn"] = 1
+        door_state["porch_observation"] = archetype_data.get("porch_observation", door_state.get("porch_observation", ""))
         door_state["messages"] = [
             {
                 "sender": "prospect",
@@ -72,5 +123,8 @@ def reset_chat(request):
         door_state["suggestions"] = archetype_data["suggestions"]
         request.session['door_state'] = door_state
         request.session.modified = True
+
+        if request.headers.get('HX-Request'):
+            return render(request, 'chat_content.html', {'door': door_state})
 
     return redirect('simulator:chat_view')

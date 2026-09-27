@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" class="w-full h-full">
+    <defs>
+        <!-- Degradado de fondo Liquid Glass -->
+        <linearGradient id="logoBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#0f766e" stop-opacity="0.9" />
+            <stop offset="60%" stop-color="#115e59" stop-opacity="0.95" />
+            <stop offset="100%" stop-color="#042f2e" stop-opacity="1" />
+        </linearGradient>
+
+        <!-- Degradado de Borde Especular -->
+        <linearGradient id="logoBorderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#5eead4" stop-opacity="0.8" />
+            <stop offset="50%" stop-color="#14b8a6" stop-opacity="0.3" />
+            <stop offset="100%" stop-color="#0284c7" stop-opacity="0.7" />
+        </linearGradient>
+
+        <!-- Degradado Rayo de Energía (Electric TXU Spark) -->
+        <linearGradient id="sparkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#fef08a" />
+            <stop offset="35%" stop-color="#facc15" />
+            <stop offset="100%" stop-color="#f97316" />
+        </linearGradient>
+
+        <!-- Degradado Marco Arquitectónico -->
+        <linearGradient id="archGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#99f6e4" />
+            <stop offset="100%" stop-color="#2dd4bf" />
+        </linearGradient>
+
+        <!-- Sombra Suave de Profundidad -->
+        <filter id="glowFilter" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0d9488" flood-opacity="0.4" />
+            <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#042f2e" flood-opacity="0.5" />
+        </filter>
+        <filter id="sparkGlow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#f59e0b" flood-opacity="0.6" />
+        </filter>
+    </defs>
+
+    <!-- Contenedor Squircle / Liquid Glass Tile -->
+    <rect x="2" y="2" width="60" height="60" rx="17" fill="url(#logoBgGrad)" stroke="url(#logoBorderGrad)" stroke-width="1.75" filter="url(#glowFilter)" />
+    
+    <!-- Reflejo Especular Superior (Efecto Cristal de Apple) -->
+    <path d="M4 19 C 4 10, 10 4, 19 4 L 45 4 C 54 4, 60 10, 60 19 C 60 21, 56 22, 43 21 C 28 20, 16 23, 4 21 Z" fill="white" fill-opacity="0.12" />
+
+    <!-- Techo Residencial Geométrico Tejado -->
+    <path d="M14 29 L32 14 L50 29" stroke="url(#archGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M20 24 L20 18 L24 18 L24 20.5" stroke="url(#archGrad)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.75" />
+
+    <!-- Marco de la Puerta y Dintel -->
+    <path d="M21 29 V47 C21 47.55 21.45 48 22 48 H42 C42.55 48 43 47.55 43 47 V29" stroke="url(#archGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Umbral / Escalón de Entrada -->
+    <line x1="17" y1="48" x2="47" y2="48" stroke="url(#archGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.9" />
+
+    <!-- Rayo de Energía Eléctrica Cruzando la Puerta (TXU Spark) -->
+    <path d="M34.5 20 L24 33 H32.5 L29 46 L42 30.5 H33.5 L37 20 Z" fill="url(#sparkGrad)" filter="url(#sparkGlow)" />
+
+    <!-- Sensor / Indicador de Conexión Inteligente Smart Meter -->
+    <circle cx="25" cy="38" r="1.5" fill="#5eead4" />
+</svg>

@@ -9,10 +9,21 @@ const VoiceIntercom = (function() {
     let isListening = false;
     let isSpeaking = false;
     let silenceTimer = null;
+    let resumeListeningTimer = null;
+    let activeUtterance = null;
     let isHandsFree = true;
     let isMuted = false;
     let currentGender = 'M';
     let availableVoices = [];
+
+    const FEMALE_NAMES = [
+        'Carmen Morales',
+        'Patricia Ortiz',
+        'Andrea Salazar',
+        'Beatriz Luna',
+        'Elena Ramos',
+        'Valeria Ríos'
+    ];
 
     // Inicializar AudioContext de forma perezosa tras el primer gesto del usuario
     function getAudioContext() {
@@ -80,61 +91,134 @@ const VoiceIntercom = (function() {
         window.speechSynthesis.onvoiceschanged = loadVoices;
     }
 
+    // Obtener género del residente actual desde el DOM o por catálogo
+    function getResidentGender(overrideGender) {
+        if (overrideGender && (overrideGender === 'F' || overrideGender === 'M')) {
+            return overrideGender;
+        }
+
+        const chatCard = document.getElementById('chat-card');
+        if (chatCard) {
+            const cardGender = chatCard.dataset.gender;
+            if (cardGender && (cardGender === 'F' || cardGender === 'M')) {
+                return cardGender;
+            }
+
+            const residentName = (chatCard.dataset.resident || '').trim();
+            if (FEMALE_NAMES.includes(residentName)) {
+                return 'F';
+            }
+            if (residentName) {
+                return 'M';
+            }
+        }
+
+        return currentGender || 'M';
+    }
+
     // Seleccionar voz en español acorde al género del prospecto
     function selectVoice(gender) {
         if (!availableVoices || availableVoices.length === 0) {
             loadVoices();
         }
-        
-        const spanishVoices = availableVoices.filter(v => v.lang && (v.lang.startsWith('es') || v.lang.includes('ES')));
+
+        const spanishVoices = (availableVoices || []).filter(v => v.lang && (v.lang.startsWith('es') || v.lang.includes('ES')));
         if (spanishVoices.length === 0) {
-            return availableVoices[0] || null;
+            return {
+                voice: availableVoices && availableVoices.length > 0 ? availableVoices[0] : null,
+                isExplicitGender: false
+            };
         }
 
         const isFemale = (gender || '').toUpperCase() === 'F';
-        
-        // Criterios de búsqueda por nombre de voz
-        const femaleKeywords = ['female', 'paulina', 'monica', 'sabina', 'helena', 'laura', 'lucia', 'elena', 'sofia', 'paloma', 'hilda'];
-        const maleKeywords = ['male', 'jorge', 'pablo', 'raul', 'diego', 'enrique', 'carlos', 'miguel', 'juan'];
+
+        // Criterios de búsqueda por nombre de voz en sistemas operativos y navegadores
+        const femaleKeywords = [
+            'female', 'mujer', 'paulina', 'monica', 'sabina', 'helena', 'laura', 'lucia',
+            'elena', 'sofia', 'paloma', 'hilda', 'dalia', 'elvira', 'angela', 'angelica',
+            'carmen', 'valeria', 'rosa', 'patricia', 'marta', 'conchita', 'jimena',
+            'francisca', 'marina', 'victoria'
+        ];
+
+        const maleKeywords = [
+            'male', 'hombre', 'jorge', 'pablo', 'raul', 'diego', 'enrique', 'carlos',
+            'miguel', 'juan', 'alvaro', 'gonzalo', 'alonso', 'alberto', 'pedro',
+            'manuel', 'mateo', 'tomas', 'javier', 'david', 'antonio', 'luis',
+            'ignacio', 'rodrigo', 'fernando', 'hector', 'sergio'
+        ];
 
         if (isFemale) {
-            const foundFemale = spanishVoices.find(v => femaleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
-            if (foundFemale) return foundFemale;
+            const foundFemale = spanishVoices.find(v => {
+                const nameLower = (v.name || '').toLowerCase();
+                const vGender = (v.gender || '').toLowerCase();
+                return vGender === 'female' || femaleKeywords.some(kw => nameLower.includes(kw));
+            });
+            if (foundFemale) {
+                return { voice: foundFemale, isExplicitGender: true };
+            }
         } else {
-            const foundMale = spanishVoices.find(v => maleKeywords.some(kw => v.name.toLowerCase().includes(kw)));
-            if (foundMale) return foundMale;
+            const foundMale = spanishVoices.find(v => {
+                const nameLower = (v.name || '').toLowerCase();
+                const vGender = (v.gender || '').toLowerCase();
+                return vGender === 'male' || maleKeywords.some(kw => nameLower.includes(kw));
+            });
+            if (foundMale) {
+                return { voice: foundMale, isExplicitGender: true };
+            }
         }
 
-        // Si no hay específica por género, usar la primera en español de la región
+        // Si no hay voz explícita para el género, usar la primera en español preferente de la región
         const preferredLocale = spanishVoices.find(v => v.lang === 'es-US' || v.lang === 'es-MX');
-        return preferredLocale || spanishVoices[0];
+        return {
+            voice: preferredLocale || spanishVoices[0],
+            isExplicitGender: false
+        };
     }
 
     // Vocalizar respuesta del residente
-    function speak(text, gender = 'M', onFinishCallback = null) {
+    function speak(text, gender = null, onFinishCallback = null) {
         if (!('speechSynthesis' in window)) {
             console.warn('[VoiceIntercom] SpeechSynthesis no soportado');
             if (onFinishCallback) onFinishCallback();
             return;
         }
 
+        const resolvedGender = getResidentGender(gender);
+        currentGender = resolvedGender;
+
+        // Limpiar timers activos de escucha
+        clearTimeout(resumeListeningTimer);
+        clearTimeout(silenceTimer);
+
         if (isMuted) {
             updateStatusBadge('Voz silenciada (Modo texto)', 'slate');
             if (isHandsFree) {
-                setTimeout(startListening, 600);
+                resumeListeningTimer = setTimeout(startListening, 600);
             }
             if (onFinishCallback) onFinishCallback();
             return;
         }
 
-        window.speechSynthesis.cancel(); // Detener cualquier locución previa
-        stopListening();
+        // CRUCIAL: Detener y abortar el micrófono inmediatamente para que no capture el altavoz
+        isSpeaking = true;
+        stopListening(true);
+
+        // Cancelar locución previa del sintetizador
+        try {
+            window.speechSynthesis.cancel();
+        } catch (e) {}
+        activeUtterance = null;
+        window._activeUtterance = null;
 
         const cleanText = text.replace(/[*_#`]/g, '').trim();
-        if (!cleanText) return;
+        if (!cleanText) {
+            isSpeaking = false;
+            return;
+        }
 
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        const voice = selectVoice(gender);
+        const { voice, isExplicitGender } = selectVoice(resolvedGender);
+
         if (voice) {
             utterance.voice = voice;
             utterance.lang = voice.lang || 'es-US';
@@ -142,38 +226,69 @@ const VoiceIntercom = (function() {
             utterance.lang = 'es-US';
         }
 
-        utterance.rate = 1.02;
-        utterance.pitch = (gender || '').toUpperCase() === 'F' ? 1.08 : 0.95;
+        const isFemale = (resolvedGender === 'F');
+
+        // Calibración acústica para diferenciar hombre y mujer:
+        // Mujer: pitch agudo (1.15) y velocidad natural (1.02)
+        // Hombre: pitch barítono profundo (0.68) si la voz base del navegador es genérica/femenina,
+        // o (0.88) si el sistema ya tiene una voz nativa masculina instalada.
+        if (isFemale) {
+            utterance.pitch = 1.15;
+            utterance.rate = 1.02;
+        } else {
+            utterance.pitch = isExplicitGender ? 0.88 : 0.68;
+            utterance.rate = 0.94;
+        }
+
+        // Mantener referencia global en window para evitar que el Garbage Collector de Chrome
+        // interrumpa la locución a mitad de frase (Chrome Bug conocido de SpeechSynthesis)
+        activeUtterance = utterance;
+        window._activeUtterance = utterance;
 
         utterance.onstart = function() {
             isSpeaking = true;
             setWaveVisualizer(true, 'speaking');
-            updateStatusBadge('Residente hablando...', 'amber');
+            const roleLabel = isFemale ? 'Residente (Voz Femenina)' : 'Residente (Voz Masculina)';
+            updateStatusBadge(`${roleLabel} hablando...`, 'amber');
         };
 
-        utterance.onend = function() {
+        const handleSpeechEnd = function() {
             isSpeaking = false;
+            activeUtterance = null;
+            window._activeUtterance = null;
             setWaveVisualizer(false, 'idle');
-            updateStatusBadge('Listo para hablar', 'teal');
+            updateStatusBadge('Listo para hablar (Tu turno)...', 'teal');
 
             if (onFinishCallback) onFinishCallback();
-            if (isHandsFree) {
-                setTimeout(startListening, 450);
+
+            // ESPERAR a que termine de hablar antes de reanudar el micrófono.
+            // Pausa de seguridad (850ms) para amortiguar cualquier eco de sala o retraso de hardware
+            if (isHandsFree && !isMuted) {
+                clearTimeout(resumeListeningTimer);
+                resumeListeningTimer = setTimeout(function() {
+                    if (!isSpeaking && !(window.speechSynthesis && window.speechSynthesis.speaking)) {
+                        startListening();
+                    }
+                }, 850);
             }
         };
+
+        utterance.onend = handleSpeechEnd;
 
         utterance.onerror = function(err) {
-            console.warn('[VoiceIntercom] Error en síntesis:', err);
-            isSpeaking = false;
-            setWaveVisualizer(false, 'idle');
-            updateStatusBadge('Listo', 'slate');
-            if (onFinishCallback) onFinishCallback();
-            if (isHandsFree) {
-                setTimeout(startListening, 500);
-            }
+            console.warn('[VoiceIntercom] Evento de finalización/error en síntesis:', err);
+            handleSpeechEnd();
         };
 
-        window.speechSynthesis.speak(utterance);
+        // Retardo preventivo de 50ms para permitir inicialización limpia del driver de audio
+        setTimeout(() => {
+            try {
+                window.speechSynthesis.speak(utterance);
+            } catch (e) {
+                console.warn('[VoiceIntercom] Excepción en speechSynthesis.speak:', e);
+                handleSpeechEnd();
+            }
+        }, 50);
     }
 
     // Inicializar SpeechRecognition (STT)
@@ -198,6 +313,12 @@ const VoiceIntercom = (function() {
         };
 
         rec.onresult = function(event) {
+            // FILTRO HALF-DUPLEX: Si el sintetizador está hablando o la app está en modo locución,
+            // descartar inmediatamente cualquier sonido captado (evita que el micrófono se escuche a sí mismo)
+            if (isSpeaking || (window.speechSynthesis && window.speechSynthesis.speaking)) {
+                return;
+            }
+
             let interimTranscript = '';
             let finalTranscript = '';
 
@@ -211,7 +332,7 @@ const VoiceIntercom = (function() {
 
             const inputField = document.getElementById('message-input');
             if (inputField) {
-                const currentText = finalTranscript || interimTranscript;
+                const currentText = (finalTranscript || interimTranscript).trim();
                 if (currentText) {
                     inputField.value = currentText;
                 }
@@ -221,19 +342,24 @@ const VoiceIntercom = (function() {
             if (isHandsFree && (finalTranscript || interimTranscript)) {
                 clearTimeout(silenceTimer);
                 silenceTimer = setTimeout(function() {
+                    // Verificar nuevamente que no esté hablando el residente
+                    if (isSpeaking || (window.speechSynthesis && window.speechSynthesis.speaking)) {
+                        return;
+                    }
+
                     const textToSend = (inputField ? inputField.value : '').trim();
                     if (textToSend.length > 2) {
-                        stopListening();
+                        stopListening(true);
                         updateStatusBadge('Enviando propuesta a Gemini...', 'teal');
                         submitCurrentMessage();
                     }
-                }, 1300); // 1.3s de pausa natural tras hablar
+                }, 1400); // 1.4s de pausa natural tras hablar
             }
         };
 
         rec.onerror = function(event) {
-            console.warn('[VoiceIntercom] Error en reconocimiento:', event.error);
-            if (event.error !== 'no-speech') {
+            if (event.error !== 'no-speech' && event.error !== 'aborted') {
+                console.warn('[VoiceIntercom] Error en reconocimiento:', event.error);
                 isListening = false;
                 updateMicButtonUI(false, true);
                 setWaveVisualizer(false, 'idle');
@@ -243,7 +369,9 @@ const VoiceIntercom = (function() {
         rec.onend = function() {
             isListening = false;
             updateMicButtonUI(false, true);
-            setWaveVisualizer(false, 'idle');
+            if (!isSpeaking) {
+                setWaveVisualizer(false, 'idle');
+            }
         };
 
         return rec;
@@ -251,10 +379,12 @@ const VoiceIntercom = (function() {
 
     // Comenzar captura de voz
     function startListening() {
-        if (isSpeaking) {
-            window.speechSynthesis.cancel();
-            isSpeaking = false;
+        // Si el residente está hablando, NO abrir el micrófono para evitar interrupciones o ecos
+        if (isSpeaking || (window.speechSynthesis && window.speechSynthesis.speaking)) {
+            return;
         }
+
+        clearTimeout(resumeListeningTimer);
 
         if (!recognition) {
             recognition = initSpeechRecognition();
@@ -264,28 +394,37 @@ const VoiceIntercom = (function() {
             try {
                 recognition.start();
             } catch (e) {
-                // Si ya estaba en curso
+                // Si ya estaba en curso, ignorar error de estado
             }
         }
     }
 
-    // Detener captura de voz
-    function stopListening() {
+    // Detener captura de voz (forceAbort descarta buffers activos)
+    function stopListening(forceAbort = false) {
         clearTimeout(silenceTimer);
+        clearTimeout(resumeListeningTimer);
+
         if (recognition && isListening) {
             try {
-                recognition.stop();
+                if (forceAbort && typeof recognition.abort === 'function') {
+                    recognition.abort();
+                } else {
+                    recognition.stop();
+                }
             } catch (e) {}
         }
+
         isListening = false;
         updateMicButtonUI(false, true);
-        setWaveVisualizer(false, 'idle');
+        if (!isSpeaking) {
+            setWaveVisualizer(false, 'idle');
+        }
     }
 
     // Alternar estado de escucha manual
     function toggleListening() {
         if (isListening) {
-            stopListening();
+            stopListening(false);
             const inputField = document.getElementById('message-input');
             if (inputField && inputField.value.trim().length > 1) {
                 submitCurrentMessage();
@@ -293,6 +432,15 @@ const VoiceIntercom = (function() {
                 updateStatusBadge('Micrófono en pausa', 'slate');
             }
         } else {
+            // Si el usuario activa el micrófono manualmente mientras el residente habla, interrumpir
+            if (isSpeaking) {
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                }
+                isSpeaking = false;
+                activeUtterance = null;
+                window._activeUtterance = null;
+            }
             startListening();
         }
     }
@@ -370,7 +518,7 @@ const VoiceIntercom = (function() {
             if (iconMic) iconMic.classList.add('hidden');
             if (iconPulse) iconPulse.classList.remove('hidden');
         } else {
-            btn.className = 'w-11 h-11 rounded-2xl liquid-pill text-slate-300 hover:text-white flex items-center justify-center flex-shrink-0 transition-all';
+            btn.className = 'w-11 h-11 rounded-2xl liquid-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center flex-shrink-0 transition-all';
             btn.title = 'Activar micrófono para hablar';
             if (iconMic) iconMic.classList.remove('hidden');
             if (iconPulse) iconPulse.classList.add('hidden');
@@ -383,14 +531,14 @@ const VoiceIntercom = (function() {
         const btn = document.getElementById('toggle-handsfree-btn');
         if (btn) {
             if (isHandsFree) {
-                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-teal-300 border-teal-500/30 bg-teal-950/40 text-xs font-medium';
+                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-teal-700 dark:text-teal-300 border-teal-500/30 bg-teal-500/10 dark:bg-teal-950/40 text-xs font-medium';
                 btn.textContent = 'Manos Libres: Activo';
                 updateStatusBadge('Modo Manos Libres encendido', 'teal');
             } else {
-                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-slate-400 border-white/5 bg-white/5 text-xs font-medium';
+                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-white/5 text-xs font-medium';
                 btn.textContent = 'Manos Libres: Manual';
                 updateStatusBadge('Modo Manual (Usa el botón de micrófono)', 'slate');
-                stopListening();
+                stopListening(true);
             }
         }
     }
@@ -401,10 +549,14 @@ const VoiceIntercom = (function() {
         const btn = document.getElementById('toggle-mute-btn');
         if (btn) {
             if (isMuted) {
-                window.speechSynthesis.cancel();
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                }
                 isSpeaking = false;
+                activeUtterance = null;
+                window._activeUtterance = null;
                 setWaveVisualizer(false, 'idle');
-                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-rose-300 border-rose-500/30 bg-rose-950/40 text-xs font-medium flex items-center gap-1.5';
+                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-rose-700 dark:text-rose-300 border-rose-500/30 bg-rose-500/10 dark:bg-rose-950/40 text-xs font-medium flex items-center gap-1.5';
                 btn.innerHTML = `
                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
@@ -414,9 +566,9 @@ const VoiceIntercom = (function() {
                 `;
                 updateStatusBadge('Voz apagada', 'slate');
             } else {
-                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-slate-300 hover:text-white transition flex items-center gap-1.5 text-xs';
+                btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs';
                 btn.innerHTML = `
-                    <svg class="w-3.5 h-3.5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
                     </svg>
                     <span>Voz Activa</span>
@@ -431,18 +583,17 @@ const VoiceIntercom = (function() {
         const chatCard = document.getElementById('chat-card');
         if (!chatCard) return;
 
-        const gender = chatCard.dataset.gender || 'M';
-        currentGender = gender;
+        currentGender = getResidentGender();
 
         // Extraer el último mensaje del prospecto
         const prospectMessages = document.querySelectorAll('.prospect-bubble-text');
         if (prospectMessages.length > 0) {
             const latestMsg = prospectMessages[prospectMessages.length - 1].textContent.trim();
             if (latestMsg) {
-                // Pequeño retardo para asegurar renderizado visual
+                // Retardo de 200ms para permitir renderizado fluido del DOM antes de hablar
                 setTimeout(() => {
                     speak(latestMsg, currentGender);
-                }, 150);
+                }, 200);
             }
         }
     }
@@ -450,13 +601,14 @@ const VoiceIntercom = (function() {
     // Iniciar llamada/interacción inicial con timbre
     function ringAndStart() {
         playDoorbell();
+        currentGender = getResidentGender();
         setTimeout(() => {
             const prospectMessages = document.querySelectorAll('.prospect-bubble-text');
             if (prospectMessages.length > 0) {
                 const latestMsg = prospectMessages[0].textContent.trim();
                 speak(latestMsg, currentGender);
             }
-        }, 750);
+        }, 800);
     }
 
     return {
@@ -468,6 +620,8 @@ const VoiceIntercom = (function() {
         toggleHandsFree,
         toggleMute,
         onChatContentSwapped,
-        ringAndStart
+        ringAndStart,
+        selectVoice,
+        getResidentGender
     };
 })();

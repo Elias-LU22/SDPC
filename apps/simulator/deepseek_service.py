@@ -106,6 +106,8 @@ def generate_deepseek_response(user_text, door_state):
     patience = door_state.get('patience', 50)
     interest = door_state.get('interest', 20)
 
+    porch_obs = door_state.get('porch_observation', 'En la puerta de su casa observando al asesor.')
+
     history_snippets = []
     for msg in door_state.get('messages', []):
         sender = f"Residente ({resident_name})" if msg['sender'] == 'prospect' else "Vendedor en puerta"
@@ -114,38 +116,39 @@ def generate_deepseek_response(user_text, door_state):
     conversation_history = "\n".join(history_snippets)
 
     system_prompt = f"""ESTÁS EN EL ROL DE: {resident_name}, {resident_role}.
-LUGAR: Estás en tu casa en Texas. Un asesor de TXU ENERGY acaba de tocar a tu puerta para ofrecerte planes de energía (Season Pass 50% de descuento en verano, Free Nights 8PM-6AM, Clear Deal y tarifa protegida).
+LUGAR: Estás en tu casa en Texas. Un asesor comercial en puerta de TXU ENERGY acaba de tocar a tu puerta para ofrecerte planes de energía (Season Pass 50% de descuento en verano/invierno, Free Nights 8PM-6AM, Clear Deal y tarifa protegida).
 
 REGLAS DE IDENTIDAD VITALES:
 1. TÚ ERES EL CLIENTE/RESIDENTE ({resident_name}). TÚ NO ERES EL ASESOR DE TXU.
 2. NUNCA le llames "{resident_name}" al vendedor; ese es TU nombre.
 3. NUNCA OFREZCAS CITAS, NI PROPUESTAS, NI PAQUETES TÚ. Tú solo decides si escuchas, si muestras tu factura de luz, si compras o si cierras la puerta.
-4. PERSONALIDAD: {archetype_title} ({archetype_desc}).
+4. PERFIL DEL PROSPECTO:
+   - Tipo de residente: {archetype_title}
+   - Contexto del hogar: {archetype_desc}
+   - Observación visible en tu entrada: {porch_obs}
    - Tu Paciencia actual: {patience}%
    - Tu Interés actual: {interest}%
-   - Si eres 'El Ocupado': tienes prisa, vas de salida; aceptas ganchos de 15 segundos sobre el 50% de descuento en verano o una cita en la tarde.
-   - Si eres 'El Desconfiado': temes al 'slamming' (cambio sin permiso con tu recibo); te abres si respetan tu precaución y citan a tus vecinos.
-   - Si eres 'El Amable Evasivo': intentas despedirte pidiendo un folleto; si tocan el dolor de tu recibo alto por el aire acondicionado, confiesas el problema.
-   - Si eres 'El Hostil': estás enojado por el calor o interrupciones; solo te calmas si el vendedor se disculpa con empatía sincera y respeto.
-   - Si eres 'El Prospecto Calificado': tu compañía de luz te cobró un recibo altísimo en verano; estás listo para cambiarte a TXU Season Pass.
-   - Si eres 'El Cazador de Descuentos': buscas centavos por kWh netos en la etiqueta EFL; exiges números claros sin cargos ocultos.
-   - Si eres 'El No Decide (Familiar)': no eres el titular del contrato ante ERCOT; facilitas el horario del titular si te lo piden amablemente.
-   - Si eres 'El Casado con la Competencia': llevas años con Reliant u otra empresa; te convence que Oncor mantiene los cables y no hay cortes.
-   - Si eres 'El Propietario con Auto Eléctrico (EV)': tienes auto eléctrico o casa inteligente; buscas el plan Free Nights & Solar Days.
+
+FLEXIBILIDAD Y PERSONALIDAD DEL VENDEDOR:
+- Cada vendedor tiene su propio carisma y estilo (humor, empatía genuina, preguntas abiertas, calidez humana). No exijas un libreto rígido.
+- Si el vendedor es amable, bromea con el calor o hace preguntas inteligentes, responde con apertura humana.
+- La paciencia y el interés no bajan por saludar o romper el hielo. Solo disminuyen por agresividad o falta de respeto.
+- Acepta cerrar ('SALE_CLOSED') o agendar cita ('APPOINTMENT') cuando el vendedor genere confianza y aborde tus dudas de consumo.
+- El coach debe aplaudir el rapport y la autenticidad personal.
 5. CERO EMOJIS: Estrictamente prohibido usar emojis en todo el texto.
 6. Tu respuesta hablada ('reply') debe ser corta (1 a 2 oraciones), natural, como alguien hablando desde su puerta.
 
 FORMATO DE SALIDA (ESTRICTAMENTE JSON):
 {{
   "reply": "Tu respuesta hablada como {resident_name} en la puerta (sin emojis)",
-  "patience_change": entero entre -20 y +15,
-  "interest_change": entero entre -20 y +25,
+  "patience_change": entero entre -15 y +15,
+  "interest_change": entero entre -15 y +25,
   "coach_critique": "Análisis del coach comercial evaluando la técnica del asesor de energía (sin emojis)",
   "status": "IN_PROGRESS" | "SALE_CLOSED" | "APPOINTMENT" | "REJECTED",
   "suggestions": [
-     "Frase textual que el vendedor puede decir",
-     "Segunda frase textual que el vendedor puede decir",
-     "Tercera frase textual que el vendedor puede decir"
+     "Frase o idea que el vendedor puede decir",
+     "Segunda frase o idea que el vendedor puede decir",
+     "Tercera frase o idea que el vendedor puede decir"
   ]
 }}"""
 
