@@ -237,5 +237,137 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertNotIn('**', cleaned)
         self.assertEqual(cleaned, "Buenas tardes. No me interesa, gracias.")
 
+    def test_turn_awareness_prevents_mid_chat_opening_greetings(self):
+        """Verifica que a partir del turno 1 no se generen saludos de apertura ni feedback de gancho inicial."""
+        from apps.simulator.chat_engine import evaluate_response_local, ARCHETYPE_DETAILS
+        archetypes = ["POLITE_EVASIVE", "BUSY", "SKEPTICAL", "HOSTILE", "LOYALIST"]
+        for arch in archetypes:
+            door = {
+                "door_number": 105,
+                "resident_name": "Test Resident",
+                "resident_role": "Residente",
+                "archetype": arch,
+                "archetype_title": ARCHETYPE_DETAILS[arch]["title"],
+                "archetype_description": ARCHETYPE_DETAILS[arch]["description"],
+                "patience": 50,
+                "interest": 30,
+                "status": "IN_PROGRESS",
+                "turn": 2,  # Ya en turno 2 (en curso)
+                "messages": [
+                    {"sender": "user", "text": "Hola", "coach": None},
+                    {"sender": "prospect", "text": "Respuesta 1", "coach": None},
+                    {"sender": "user", "text": "Pregunta 2", "coach": None},
+                    {"sender": "prospect", "text": "Respuesta 2", "coach": None},
+                ],
+                "suggestions": []
+            }
+            # Enviar pregunta abierta que antes activaba has_natural_personality
+            res = evaluate_response_local("El calor es insoportable, ¿le gustaría que le presente veranos gratis?", door)
+            latest_reply = res["messages"][-1]["text"].lower()
+            latest_coach = res["messages"][-1]["coach"].lower()
+
+            # No debe reiniciar con saludos típicos de apertura
+            self.assertFalse(latest_reply.startswith("buenas tardes"), f"El arquetipo {arch} saludó en turno intermedio: {latest_reply}")
+            self.assertFalse(latest_reply.startswith("hola buenas"), f"El arquetipo {arch} saludó en turno intermedio: {latest_reply}")
+            # El coach no debe diagnosticar gancho de apertura inicial
+            self.assertNotIn("gancho de apertura:", latest_coach)
+            self.assertNotIn("contacto inicial", latest_coach)
+            self.assertNotIn("evasión inicial", latest_coach)
+
+    def test_multi_turn_progression_elena_ramos(self):
+        """Prueba de flujo completo multi-turno con Elena Ramos (POLITE_EVASIVE)."""
+        from apps.simulator.chat_engine import create_new_door, evaluate_response_local
+        door = create_new_door()
+        door['archetype'] = 'POLITE_EVASIVE'
+        door['patience'] = 50
+        door['interest'] = 20
+        door['turn'] = 0
+        door['messages'] = []
+
+        # Turno 1 (Apertura)
+        d1 = evaluate_response_local("Buenas tardes señora Elena, somos de TXU Energy, ¿consume mucha energía eléctrica con el clima?", door)
+        self.assertIn("Gancho de apertura:", d1["messages"][-1]["coach"])
+        self.assertEqual(d1["turn"], 1)
+
+        # Turno 2 (Manejo de folleto / empatía)
+        d2 = evaluate_response_local("Entiendo perfectamente Doña Elena, soy Elías asesor de ventas de TXU Energy y con este calor el aire acondicionado genera mucho consumo.", d1)
+        self.assertNotIn("Gancho de apertura:", d2["messages"][-1]["coach"])
+        self.assertFalse(d2["messages"][-1]["text"].startswith("Buenas tardes joven"))
+        self.assertEqual(d2["turn"], 2)
+
+        # Turno 3 (Propuesta de valor - Veranos gratis / Season Pass)
+        d3 = evaluate_response_local("Claro, el calor es pesado. ¿Le gustaría conocer Season Pass con 50% de descuento en verano?", d2)
+        self.assertNotIn("Buenas tardes joven", d3["messages"][-1]["text"])
+        self.assertIn("contrato", d3["messages"][-1]["text"].lower())
+        self.assertEqual(d3["status"], "IN_PROGRESS")
+        self.assertEqual(d3["turn"], 3)
+
+        # Turno 4 (Cierre con factura y garantía)
+        d4 = evaluate_response_local("Tiene 60 días de garantía total sin penalización. ¿Tiene su factura a mano para calcular el ahorro?", d3)
+        self.assertEqual(d4["status"], "SALE_CLOSED")
+        self.assertIn("factura", d4["messages"][-1]["text"].lower())
+
+    def test_bare_greeting_opening_penalized_in_hostile(self):
+        """Un saludo vacío como 'hola' en el turno de apertura ante un prospecto hostil debe ser penalizado."""
+        from apps.simulator.chat_engine import create_new_door, evaluate_response_local
+        door = create_new_door()
+        door['resident_name'] = 'Patricia Ortiz'
+        door['archetype'] = 'HOSTILE'
+        door['patience'] = 50
+        door['interest'] = 30
+        door['turn'] = 0
+        door['messages'] = []
+
+        result = evaluate_response_local("hola", door)
+        # La paciencia debe caer de 50 a 35 (-15)
+        self.assertEqual(result['patience'], 35)
+        # El interés debe caer de 30 a 25 (-5)
+        self.assertEqual(result['interest'], 25)
+        # La respuesta del prospecto debe reflejar molestia y pedir identificación
+        last_reply = result['messages'][-1]['text']
+        self.assertIn("calorón", last_reply.lower())
+        self.assertIn("¿quién es usted", last_reply.lower())
+        # El coach comercial debe reprender el saludo vacío
+        coach = result['messages'][-1]['coach']
+        self.assertIn("Un simple saludo no es un gancho comercial", coach)
+        self.assertIn("TXU Energy", coach)
+
+    def test_bare_greeting_opening_penalized_in_busy(self):
+        """Un saludo vacío ante un prospecto ocupado debe reducir su paciencia de inmediato."""
+        from apps.simulator.chat_engine import create_new_door, evaluate_response_local
+        door = create_new_door()
+        door['archetype'] = 'BUSY'
+        door['patience'] = 50
+        door['interest'] = 20
+        door['turn'] = 0
+        door['messages'] = []
+
+        result = evaluate_response_local("buenas tardes", door)
+        # La paciencia debe caer de 50 a 40 (-10)
+        self.assertEqual(result['patience'], 40)
+        coach = result['messages'][-1]['coach']
+        self.assertIn("Falta de gancho de tiempo y motivo", coach)
+
+    def test_bare_greeting_mid_conversation_rebuked(self):
+        """Saludar con 'hola' en medio de una conversación ya iniciada debe ser reprendido."""
+        from apps.simulator.chat_engine import create_new_door, evaluate_response_local
+        door = create_new_door()
+        door['archetype'] = 'HOSTILE'
+        door['patience'] = 40
+        door['interest'] = 25
+        door['turn'] = 2
+        door['messages'] = [
+            {"sender": "user", "text": "buenas tardes", "coach": None},
+            {"sender": "prospect", "text": "¿Qué quiere?", "coach": None},
+        ]
+
+        result = evaluate_response_local("hola", door)
+        self.assertLessEqual(result['patience'], 30)
+        last_reply = result['messages'][-1]['text']
+        self.assertIn("seguir saludando", last_reply.lower())
+
+
+
+
 
 
