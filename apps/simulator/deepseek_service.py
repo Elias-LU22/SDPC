@@ -152,9 +152,24 @@ FORMATO DE SALIDA (ESTRICTAMENTE JSON):
   ]
 }}"""
 
+    is_opening_turn = len(door_state.get('messages', [])) == 0
+    if is_opening_turn:
+        user_prompt = (
+            f"SITUACIÓN EN LA PUERTA:\n"
+            f"El timbre acaba de sonar en tu casa. Abres la puerta y el asesor comercial de TXU Energy te dice de inmediato como gancho de apertura:\n"
+            f"\"{user_text}\"\n\n"
+            f"INSTRUCCIONES PARA ESTE PRIMER TURNO:\n"
+            f"1. Abre la puerta y reacciona a su gancho de apertura según tu arquetipo ({archetype_title}).\n"
+            f"2. En 'coach_critique', evalúa específicamente la efectividad técnica del gancho de apertura inicial (empatía, claridad, gancho de tiempo, impacto en los primeros 15 segundos).\n"
+            f"3. En 'suggestions', sugiere 3 alternativas sólidas para continuar la conversación hacia la factura o el sondeo de necesidades.\n"
+            f"Responde como {resident_name} en formato JSON estricto."
+        )
+    else:
+        user_prompt = f"HISTORIAL EN LA PUERTA:\n{conversation_history}\n\nEL VENDEDOR EN PUERTA DICE:\n\"{user_text}\"\n\nResponde como {resident_name} (el cliente) en formato JSON estricto."
+
     messages = [
         {"role": "system", "content": system_prompt},
-        {"role": "user", "content": f"HISTORIAL EN LA PUERTA:\n{conversation_history}\n\nEL VENDEDOR EN PUERTA DICE:\n\"{user_text}\"\n\nResponde como {resident_name} (el cliente) en formato JSON estricto."}
+        {"role": "user", "content": user_prompt}
     ]
 
     raw_response = query_deepseek(messages)

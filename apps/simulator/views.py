@@ -97,9 +97,29 @@ def next_door(request):
     return redirect('simulator:chat_view')
 
 
+def ring_doorbell(request):
+    """
+    Registra el timbre sonado en la puerta actual y devuelve la vista actualizada.
+    """
+    door_state = request.session.get('door_state')
+    if not door_state:
+        door_state = create_new_door()
+    else:
+        door_state = ensure_door_gender(door_state)
+
+    door_state['doorbell_rung'] = True
+    request.session['door_state'] = door_state
+    request.session.modified = True
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'chat_content.html', {'door': door_state})
+
+    return redirect('simulator:chat_view')
+
+
 def reset_chat(request):
     """
-    Reinicia el diálogo de la puerta actual desde cero.
+    Reinicia el diálogo de la puerta actual desde cero en el pórtico de llegada.
     """
     door_state = request.session.get('door_state')
     if door_state:
@@ -109,18 +129,11 @@ def reset_chat(request):
         door_state["patience"] = archetype_data["initial_patience"]
         door_state["interest"] = archetype_data["initial_interest"]
         door_state["status"] = "IN_PROGRESS"
-        door_state["turn"] = 1
+        door_state["turn"] = 0
+        door_state["doorbell_rung"] = False
         door_state["porch_observation"] = archetype_data.get("porch_observation", door_state.get("porch_observation", ""))
-        door_state["messages"] = [
-            {
-                "sender": "prospect",
-                "text": archetype_data["initial_message"],
-                "coach": None,
-                "patience_change": 0,
-                "interest_change": 0,
-            }
-        ]
-        door_state["suggestions"] = archetype_data["suggestions"]
+        door_state["messages"] = []
+        door_state["suggestions"] = archetype_data.get("opening_hooks", archetype_data["suggestions"])
         request.session['door_state'] = door_state
         request.session.modified = True
 
@@ -128,3 +141,25 @@ def reset_chat(request):
             return render(request, 'chat_content.html', {'door': door_state})
 
     return redirect('simulator:chat_view')
+
+
+def tts_view(request):
+    """
+    Endpoint para streaming de audio neuronal MP3 (Microsoft Edge TTS).
+    Recibe text y gender vía GET. Retorna audio/mpeg o HTTP 204 para fallback del cliente.
+    """
+    text = request.GET.get('text', '').strip()
+    gender = request.GET.get('gender', 'M').strip()
+
+    if not text:
+        return HttpResponse(status=204)
+
+    from .tts_service import synthesize_speech
+    audio_data = synthesize_speech(text, gender)
+
+    if audio_data:
+        response = HttpResponse(audio_data, content_type='audio/mpeg')
+        response['Cache-Control'] = 'public, max-age=86400'
+        return response
+
+    return HttpResponse(status=204)

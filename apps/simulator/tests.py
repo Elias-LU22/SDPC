@@ -16,23 +16,38 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertIn('patience', door)
         self.assertIn('interest', door)
         self.assertEqual(door['status'], 'IN_PROGRESS')
-        self.assertEqual(len(door['messages']), 1)
-        self.assertEqual(door['messages'][0]['sender'], 'prospect')
+        self.assertEqual(len(door['messages']), 0, "Al llegar al pórtico no debe haber mensajes previos.")
+        self.assertFalse(door['doorbell_rung'], "El timbre no debe haber sonado inicialmente.")
+        self.assertEqual(door['turn'], 0)
+        self.assertTrue(len(door['suggestions']) > 0, "Debe incluir sugerencias de ganchos de apertura.")
 
-    def test_evaluate_response_busy_archetype(self):
+    def test_evaluate_response_opening_hook_busy_archetype(self):
         door = create_new_door()
         door['archetype'] = 'BUSY'
         door['patience'] = 50
         door['interest'] = 20
-        door['turn'] = 1
+        door['turn'] = 0
+        door['messages'] = []
 
-        # Probar respuesta con gancho de 15 segundos sobre aire acondicionado y TXU Season Pass
+        # El vendedor habla primero con gancho de 15 segundos sobre aire acondicionado y TXU Season Pass
         updated_door = evaluate_response("Solo le robo 15 segundos: con este calor TXU le da 50% de descuento en verano con Season Pass.", door)
         self.assertGreater(updated_door['interest'], 20)
-        self.assertEqual(len(updated_door['messages']), 3)
-        self.assertEqual(updated_door['messages'][1]['sender'], 'user')
-        self.assertEqual(updated_door['messages'][2]['sender'], 'prospect')
-        self.assertIsNotNone(updated_door['messages'][2]['coach'])
+        self.assertEqual(len(updated_door['messages']), 2, "Deben generarse 2 mensajes: vendedor primero y prospecto respondiendo.")
+        self.assertEqual(updated_door['messages'][0]['sender'], 'user')
+        self.assertEqual(updated_door['messages'][1]['sender'], 'prospect')
+        self.assertTrue(updated_door['doorbell_rung'])
+        self.assertIn('Gancho de apertura:', updated_door['messages'][1]['coach'])
+
+    def test_ring_doorbell_view(self):
+        # Cargar primera puerta
+        self.client.get(reverse('simulator:chat_view'))
+        self.assertFalse(self.client.session['door_state']['doorbell_rung'])
+
+        # Tocar timbre vía POST
+        resp = self.client.post(reverse('simulator:ring_doorbell'), HTTP_HX_REQUEST='true')
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(self.client.session['door_state']['doorbell_rung'])
+        self.assertContains(resp, 'Timbre Activado')
 
     def test_chat_view_loads_clean_ui(self):
         response = self.client.get(reverse('simulator:chat_view'))
@@ -41,6 +56,7 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertContains(response, 'Paciencia')
         self.assertContains(response, 'Interés')
         self.assertContains(response, 'Siguiente Puerta')
+        self.assertContains(response, 'Tocar Timbre para Iniciar')
 
         # Verificar que no contenga emojis comunes
         content = response.content.decode('utf-8')
@@ -48,16 +64,18 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertFalse(bool(emoji_pattern.search(content)), "No deben existir emojis en la interfaz.")
 
     def test_send_message_post_and_htmx(self):
-        # 1. Enviar mensaje estándar
+        # 1. Enviar mensaje de apertura estándar
         resp = self.client.post(reverse('simulator:send_message'), {
             'message': 'Buenas tardes, disculpe la molestia'
         }, follow=True)
         self.assertEqual(resp.status_code, 200)
         session = self.client.session
         self.assertIn('door_state', session)
-        self.assertGreaterEqual(len(session['door_state']['messages']), 3)
+        self.assertEqual(len(session['door_state']['messages']), 2)
+        self.assertEqual(session['door_state']['messages'][0]['sender'], 'user')
+        self.assertEqual(session['door_state']['messages'][1]['sender'], 'prospect')
 
-        # 2. Enviar mensaje con cabecera HTMX
+        # 2. Enviar segundo mensaje con cabecera HTMX
         resp_htmx = self.client.post(reverse('simulator:send_message'), {
             'message': 'Solo le robo 15 segundos para revisar su recibo de luz con TXU'
         }, HTTP_HX_REQUEST='true')
@@ -68,18 +86,21 @@ class SingleScreenChatSimulatorTests(TestCase):
         # Cargar primera puerta
         self.client.get(reverse('simulator:chat_view'))
         first_door_num = self.client.session['door_state']['door_number']
+        self.assertEqual(len(self.client.session['door_state']['messages']), 0)
 
-        # Enviar un mensaje
-        self.client.post(reverse('simulator:send_message'), {'message': 'Hola'})
-        self.assertEqual(len(self.client.session['door_state']['messages']), 3)
+        # Enviar un mensaje de gancho
+        self.client.post(reverse('simulator:send_message'), {'message': 'Hola vecino, buenas tardes'})
+        self.assertEqual(len(self.client.session['door_state']['messages']), 2)
 
         # Reiniciar chat de la puerta actual
         self.client.post(reverse('simulator:reset_chat'))
-        self.assertEqual(len(self.client.session['door_state']['messages']), 1)
+        self.assertEqual(len(self.client.session['door_state']['messages']), 0)
+        self.assertFalse(self.client.session['door_state']['doorbell_rung'])
 
         # Siguiente puerta
         self.client.post(reverse('simulator:next_door'))
-        self.assertEqual(len(self.client.session['door_state']['messages']), 1)
+        self.assertEqual(len(self.client.session['door_state']['messages']), 0)
+        self.assertFalse(self.client.session['door_state']['doorbell_rung'])
 
     def test_all_nine_archetypes_handled(self):
         from apps.simulator.chat_engine import evaluate_response_local
@@ -195,6 +216,26 @@ class SingleScreenChatSimulatorTests(TestCase):
         # Verificar que por defecto la etiqueta HTML no tiene la clase dark (Modo Claro predeterminado)
         self.assertIn('<html lang="es" class="h-full antialiased">', content)
         self.assertNotIn('<html lang="es" class="h-full antialiased dark">', content)
+
+    def test_tts_view_empty_text_returns_204(self):
+        resp = self.client.get(reverse('simulator:tts_view'), {'text': '', 'gender': 'M'})
+        self.assertEqual(resp.status_code, 204, "Petición vacía a TTS debe retornar 204 No Content.")
+
+    def test_tts_view_graceful_response(self):
+        # En entorno sin conexión o sin edge-tts debe retornar 204 o 200 con audio/mpeg de forma segura
+        resp = self.client.get(reverse('simulator:tts_view'), {'text': 'Hola buenas tardes', 'gender': 'F'})
+        self.assertIn(resp.status_code, [200, 204])
+        if resp.status_code == 200:
+            self.assertEqual(resp['Content-Type'], 'audio/mpeg')
+
+    def test_tts_service_clean_text(self):
+        from apps.simulator.tts_service import clean_tts_text
+        raw_text = "Buenas tardes. [Abre la puerta con desconfianza] **No me interesa**, gracias. [Cierra]"
+        cleaned = clean_tts_text(raw_text)
+        self.assertNotIn('[Abre la puerta', cleaned)
+        self.assertNotIn('[Cierra]', cleaned)
+        self.assertNotIn('**', cleaned)
+        self.assertEqual(cleaned, "Buenas tardes. No me interesa, gracias.")
 
 
 

@@ -28,6 +28,11 @@ ARCHETYPE_DETAILS = {
         "initial_patience": 55,
         "initial_interest": 20,
         "initial_message": "Dígame rápido por favor, voy de salida al trabajo. Con este calor de Texas nadie quiere estar en la puerta. ¿Qué se le ofrece?",
+        "opening_hooks": [
+            "Buenas tardes vecino, disculpe la interrupción rápida: solo le robo 15 segundos antes de que salga para comentarle del 50% de descuento en verano de TXU.",
+            "Hola, buenas tardes. Sé que va con prisa, solo una pregunta rápida: ¿a qué hora le encuentro en la tarde para revisar su recibo de luz en 2 minutos?",
+            "Buenas tardes, vecino. Noté los aires acondicionados encendidos a todo lo que dan; con este calor de Texas queríamos avisarle del programa de ahorro de TXU."
+        ],
         "suggestions": [
             "Solo 15 segundos mientras sale: con este calor el aire acondicionado dispara las facturas. TXU le da 50% de descuento en verano con Season Pass. ¿Cuánto pagó el mes pasado?",
             "Sé que va con prisa. ¿A qué hora le encuentro en la tarde para mostrarle el comparativo de su recibo en 2 minutos?",
@@ -41,6 +46,11 @@ ARCHETYPE_DETAILS = {
         "initial_patience": 60,
         "initial_interest": 15,
         "initial_message": "¿Quién es usted? No le muestro mi recibo de luz a nadie en la puerta, andan muchos estafadores cambiando contratos sin permiso.",
+        "opening_hooks": [
+            "Buenas tardes vecino, mi nombre es asesor oficial de TXU Energy, mire mi gafete. Sé que hay mucha precaución con los estafadores en Texas, no vengo a pedirle datos personales.",
+            "Hola vecino, disculpe la molestia. Antes que nada, le muestro mi identificación oficial; solo estamos validando si sus vecinos ya congelaron su tarifa contra los picos de verano.",
+            "Buenas tardes. Como vecino prevenido hace muy bien en verificar quién toca su puerta; venimos directamente de TXU Energy con tarifas fijas protegidas."
+        ],
         "suggestions": [
             "Tiene toda la razón y hace bien en protegerse; nunca muestre su número ESI ID a extraños. Soy asesor oficial de TXU Energy, mire mi gafete. No le pido su recibo hoy, solo una pregunta: ¿su tarifa actual es fija o variable?",
             "Soy representante oficial de la empresa, mire mi credencial, no tiene nada de qué desconfiar.",
@@ -54,6 +64,11 @@ ARCHETYPE_DETAILS = {
         "initial_patience": 70,
         "initial_interest": 20,
         "initial_message": "Buenas tardes joven. Se ve interesante lo que trae de TXU, pero ando ocupada. ¿Por qué no me deja su folleto y si me interesa yo les hablo?",
+        "opening_hooks": [
+            "Buenas tardes vecina, disculpe que la interrumpa un momento. Estamos pasando con los vecinos de la cuadra para revisar el impacto del aire acondicionado en el recibo de luz.",
+            "Hola vecina, qué gusto saludarla. Rápido, antes de dejarle cualquier información en papel: ¿su factura suele superar los $200 dólares en los meses de calor?",
+            "Buenas tardes, solo una consulta breve de 30 segundos sobre el subsidio de verano de TXU Energy para los hogares de esta calle."
+        ],
         "suggestions": [
             "Con mucho gusto se lo dejo. Solo para saber cuál dejarle: ¿su factura de luz suele superar los $250 dólares en julio y agosto?",
             "Claro que sí, tenga el volante. Ahí viene el teléfono de TXU Energy para cuando guste marcar.",
@@ -67,6 +82,11 @@ ARCHETYPE_DETAILS = {
         "initial_patience": 35,
         "initial_interest": 10,
         "initial_message": "¡Otra vez tocando la puerta! Con 100 grados de calor afuera lo último que quiero es que vengan a molestar con la luz. ¡No me interesa nada!",
+        "opening_hooks": [
+            "Buenas tardes señor, una disculpa sincera por tocar a su puerta con este calor de 100 grados. Solo quería dejarle un saludo respetuoso de TXU Energy.",
+            "Hola, buenas tardes. Sé que es molesto que toquen la puerta a esta hora; prometo ser extremadamente breve si me permite solo 20 segundos.",
+            "Buenas tardes vecino, disculpe la interrupción en su descanso. Me retiro de inmediato si está ocupado, solo pasábamos a verificar el servicio en la cuadra."
+        ],
         "suggestions": [
             "Tiene toda la razón señor, una disculpa sincera por interrumpirlo. Con este calor nadie quiere que le toquen la puerta. Me retiro de inmediato, que pase buena tarde.",
             "Cálmese señor, no se enoje por nada, solo le vengo a ofrecer una tarifa de TXU que le va a convenir.",
@@ -80,6 +100,11 @@ ARCHETYPE_DETAILS = {
         "initial_patience": 70,
         "initial_interest": 50,
         "initial_message": "Buenas tardes. Qué bueno que pasa de TXU. El mes pasado mi compañía me cobró casi $400 dólares por el puro aire acondicionado. Esto es un abuso y quiero cambiarme ya.",
+        "opening_hooks": [
+            "Buenas tardes vecino, venimos de TXU Energy. Varios vecinos de la calle nos comentaron que el recibo de luz se les disparó a más de $350 este verano, ¿a ustedes también les afectó?",
+            "Hola, buenas tardes. Estamos ayudando a las familias de la colonia cuyos contratos vencieron para blindar su tarifa con el 50% de descuento de Season Pass.",
+            "Buenas tardes vecino, disculpe la molestia. ¿Ha notado cobros excesivos por el aire acondicionado en su última factura de electricidad?"
+        ],
         "suggestions": [
             "Le entiendo perfecto, muchos vecinos sufrieron ese golpe porque su contrato venció y entraron a tarifa variable. Con TXU Season Pass le damos 50% de descuento en verano y tarifa protegida. ¿Tiene su factura a mano para calcular su ahorro?",
             "Tenemos paquetes con muchas tarifas, opciones solares, planes nocturnos y términos variables...",
@@ -93,6 +118,11 @@ ARCHETYPE_DETAILS = {
         "initial_patience": 60,
         "initial_interest": 40,
         "initial_message": "A ver joven de TXU, ¿a cuántos centavos el kWh viene el plan? Pero dígame el promedio real a 1,000 kWh en la etiqueta EFL, no me disfrace los cargos de Oncor.",
+        "opening_hooks": [
+            "Buenas tardes vecino, asesor oficial de TXU Energy. Estamos comparando tarifas en centavos por kWh con total transparencia de la etiqueta EFL para esta zona.",
+            "Hola, buenas tardes. Si revisamos su consumo promedio a 1,000 kWh, podemos mostrarle cómo el crédito de $30 de Clear Deal reduce su costo por kWh.",
+            "Buenas tardes. Venimos desglosando los cargos reales de energía frente a los cargos de Oncor para encontrar el precio por kilovatio más bajo."
+        ],
         "suggestions": [
             "En el plan Clear Deal el promedio a 1,000 kWh queda en 12.8 centavos con el crédito automático de $30 dólares de TXU incluido, todo desglosado en la EFL. ¿Cuánto le cobran hoy?",
             "Depende de cuánto consuma cada mes, las tarifas de electricidad van variando en Texas según el clima.",
@@ -106,6 +136,11 @@ ARCHETYPE_DETAILS = {
         "initial_patience": 65,
         "initial_interest": 30,
         "initial_message": "Buenas tardes. Sí nos llega caro el recibo de la luz, pero de eso se encarga mi pareja. Yo aquí no tomo decisiones de contratos.",
+        "opening_hooks": [
+            "Buenas tardes, disculpe la molestia. Vengo de TXU Energy con información importante sobre el ahorro de verano en la electricidad para los propietarios del hogar.",
+            "Hola, buenas tardes. ¿Se encontrará el titular de la casa o la persona encargada de ver las facturas de luz para entregarle un comparativo breve?",
+            "Buenas tardes vecina. Estamos compartiendo las nuevas tarifas de energía fija para la colonia, ¿a qué hora suele estar quien revisa los contratos del hogar?"
+        ],
         "suggestions": [
             "Comprendo totalmente. ¿A qué hora llega su pareja para pasar 3 minutos y entregarle la comparativa de ahorro de verano directamente?",
             "No se preocupe, fírmeme usted y ya luego le avisa cuando llegue el cambio de TXU en su recibo.",
@@ -119,6 +154,11 @@ ARCHETYPE_DETAILS = {
         "initial_patience": 60,
         "initial_interest": 15,
         "initial_message": "Llevo más de 10 años con Reliant y no me gusta andar cambiando de compañía. Aunque paguemos bastante, ya los conozco y no quiero problemas.",
+        "opening_hooks": [
+            "Buenas tardes vecino, represento a TXU Energy. Estamos informando a los vecinos de la cuadra que Oncor mantiene los mismos postes pero con tarifas más económicas.",
+            "Hola, buenas tardes. Muchos vecinos que llevaban años con Reliant se sorprendieron al ver cuánto podían ahorrar cambiando a TXU sin cortes de luz.",
+            "Buenas tardes. Respetamos mucho a quienes tienen contratos de años con su compañía; solo venimos a validar si le han actualizado su precio este año."
+        ],
         "suggestions": [
             "Es muy respetable su lealtad, Reliant es una empresa conocida. Pero en Texas, Oncor sigue siendo quien entrega la energía física; no hay corte ni por un segundo. Solo por curiosidad: ¿hace cuánto que no le revisan la tarifa para bajarle el costo?",
             "Reliant es carísima y se aprovechan de los clientes viejos que no se fijan en el recibo.",
@@ -132,6 +172,11 @@ ARCHETYPE_DETAILS = {
         "initial_patience": 55,
         "initial_interest": 45,
         "initial_message": "¿TXU maneja el plan de Noches Gratis (Free Nights)? Acabamos de comprar un auto eléctrico y tenemos termostato inteligente, me interesa cargar el carro a costo cero.",
+        "opening_hooks": [
+            "Buenas tardes vecino. Noté su auto eléctrico en la cochera, ¿ya conoce el plan Free Nights de TXU Energy para cargarlo a costo cero de 8 PM a 6 AM?",
+            "Hola, buenas tardes. Vengo de TXU Energy; estamos activando planes especiales para casas inteligentes con termostatos conectados y vehículos eléctricos.",
+            "Buenas tardes. Para hogares con alto consumo nocturno y tecnología conectada, tenemos electricidad 100% gratuita por contrato durante las noches."
+        ],
         "suggestions": [
             "Exactamente, con Free Nights & Solar Days toda la electricidad de 8:00 PM a 6:00 AM es 100% gratuita. Puede cargar su auto eléctrico y enfriar su casa toda la noche sin pagar un centavo de energía. ¿A qué hora suele enchufar su vehículo?",
             "Sí tenemos ese plan, pero le conviene más el paquete estándar para toda la casa que usan todos los clientes.",
@@ -145,6 +190,7 @@ def create_new_door(exclude_name=None, exclude_archetype=None, visited_names=Non
     """
     Genera un nuevo prospecto garantizando variedad en residentes y arquetipos,
     evitando repetir el mismo prospecto o el mismo tema inmediatamente.
+    Inicia en la puerta sin mensajes previos, requiriendo tocar el timbre.
     """
     if visited_names is None:
         visited_names = []
@@ -184,17 +230,10 @@ def create_new_door(exclude_name=None, exclude_archetype=None, visited_names=Non
         "patience": archetype_data["initial_patience"],
         "interest": archetype_data["initial_interest"],
         "status": "IN_PROGRESS",  # IN_PROGRESS, SALE_CLOSED, APPOINTMENT, REJECTED
-        "turn": 1,
-        "messages": [
-            {
-                "sender": "prospect",
-                "text": archetype_data["initial_message"],
-                "coach": None,
-                "patience_change": 0,
-                "interest_change": 0,
-            }
-        ],
-        "suggestions": archetype_data["suggestions"],
+        "turn": 0,
+        "doorbell_rung": False,
+        "messages": [],
+        "suggestions": archetype_data.get("opening_hooks", archetype_data["suggestions"]),
     }
 
 
@@ -615,9 +654,19 @@ def evaluate_response_local(user_text, door_state):
             ]
 
     # Actualizar estados de la puerta
+    is_opening_turn = len(door_state.get("messages", [])) == 0
+    door_state["doorbell_rung"] = True
     door_state["patience"] = max(0, min(100, door_state["patience"] + patience_change))
     door_state["interest"] = max(0, min(100, door_state["interest"] + interest_change))
     door_state["turn"] += 1
+
+    # Personalizar feedback del coach para el gancho de apertura inicial
+    if is_opening_turn and coach:
+        coach = f"Gancho de apertura: {coach}"
+
+    # Si se completó el gancho de apertura, transicionar sugerencias hacia el guion de profundización
+    if is_opening_turn and not new_suggestions:
+        new_suggestions = ARCHETYPE_DETAILS[archetype]["suggestions"]
 
     # Evaluar desenlaces con mayor flexibilidad para el vendedor
     has_closing_signal = bool(re.search(r'(cambi|hacer el cambio|revis|firm|registr|apart|enrol|contrat|paso a las|vemos a las|agend|anot|cita|factura|recibo|tr[aá]mite)', text))
@@ -664,6 +713,7 @@ def evaluate_response(user_text, door_state):
     3. Modelos gratuitos de OpenRouter.
     4. Motor heurístico local en memoria (fallback autónomo).
     """
+    door_state["doorbell_rung"] = True
     llm_result = None
     engine_name = "Motor Local (Reglas)"
 
