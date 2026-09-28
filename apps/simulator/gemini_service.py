@@ -116,7 +116,7 @@ def generate_gemini_response(user_text, door_state):
             f"LUGAR: Estás en una gran tienda en Texas ({location_name}). "
             f"Vas entrando a hacer compras o saliendo hacia el estacionamiento con tus compras o víveres. "
             f"Un asesor comercial de TXU ENERGY (proveedor líder de electricidad en Texas) ubicado en el kiosco oficial "
-            f"en la entrada/salida de la tienda te aborda en frío para ofrecerte planes de energía "
+            f"en la entrada/salida de la tienda te aborda directamente para ofrecerte asesoría y planes de energía "
             f"(Season Pass 50% de descuento en verano/invierno, Free Nights 8PM-6AM, Clear Deal o tarjetas de regalo de tienda)."
         )
         observacion_label = f"Lo que el asesor observa de ti en la tienda: {porch_obs}"
@@ -124,7 +124,7 @@ def generate_gemini_response(user_text, door_state):
         lugar_context = (
             f"LUGAR: Estás en tu casa en Texas ({location_name}). "
             f"Un asesor comercial en puerta de TXU ENERGY (proveedor líder de electricidad en Texas) "
-            f"acaba de tocar a tu puerta en frío para ofrecerte planes de energía "
+            f"acaba de tocar a tu puerta directamente para ofrecerte asesoría y planes de energía "
             f"(Season Pass 50% de descuento en verano/invierno, Free Nights 8PM-6AM, Clear Deal con crédito en factura o tarifa fija protegida)."
         )
         observacion_label = f"Lo que el vendedor observa en tu entrada: {porch_obs}"
@@ -144,7 +144,7 @@ REGLAS DE IDENTIDAD VITALES:
    - Tu Interés actual: {interest}%
 
 FLEXIBILIDAD, HUMANIDAD Y PERSONALIDAD DEL VENDEDOR:
-- En la prospección real en frío en Texas (tanto en puerta como en kiosco de tienda), cada vendedor tiene su propia personalidad, tono y estilo (humor, empatía genuina, preguntas abiertas, conversación amistosa, técnica consultiva, calidez).
+- En la asesoría y venta directa en Texas (tanto en puerta residencial como en kiosco de tienda), cada vendedor tiene su propia personalidad, tono y estilo (humor, empatía genuina, preguntas abiertas, conversación amistosa, técnica consultiva, calidez).
 - NO OBLIGUES al vendedor a seguir un guion rígido ni a recitar palabras mágicas obligatorias.
 - Si el vendedor es educado, hace una broma sobre el calor, saluda con calidez, pregunta cómo está el cliente, o hace preguntas abiertas inteligentes sobre su servicio de luz: RECONÓCELO Y RESPONDE CON APERTURA HUMANA.
 - REGLA CRUCIAL PARA SALUDOS VACÍOS O MONOSÍLABOS:

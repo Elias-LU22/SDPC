@@ -12,6 +12,10 @@ const VoiceIntercom = (function() {
     let resumeListeningTimer = null;
     let activeUtterance = null;
     let currentAudioElement = null;
+    let sharedAudio = null;
+    let isAudioUnlocked = false;
+    let ttsAbortController = null;
+    let lastSpokenText = '';
     let isHandsFree = true;
     let isMuted = false;
     let currentGender = 'M';
@@ -30,6 +34,15 @@ const VoiceIntercom = (function() {
         'Verónica Trejo'
     ];
 
+    // Instancia única y compartida de audio para evitar bloqueos de autoplay en móviles
+    function getSharedAudio() {
+        if (!sharedAudio) {
+            sharedAudio = new Audio();
+            sharedAudio.preload = 'auto';
+        }
+        return sharedAudio;
+    }
+
     // Inicializar AudioContext de forma perezosa tras el primer gesto del usuario
     function getAudioContext() {
         if (!audioCtx) {
@@ -44,15 +57,66 @@ const VoiceIntercom = (function() {
         return audioCtx;
     }
 
-    // Detener cualquier audio activo (HTML5 Audio o SpeechSynthesis)
+    // Desbloqueo seguro de audio en navegadores móviles (iOS Safari / Android Chrome)
+    function unlockAudio() {
+        if (isAudioUnlocked) return;
+        try {
+            const ctx = getAudioContext();
+            if (ctx && ctx.state === 'suspended') {
+                ctx.resume();
+            }
+        } catch (e) {}
+
+        try {
+            const audio = getSharedAudio();
+            // Data URI de 1 muestra de audio silencioso para registrar la autorización del usuario
+            audio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+            const playPromise = audio.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    isAudioUnlocked = true;
+                }).catch(() => {});
+            }
+        } catch (e) {}
+
+        if ('speechSynthesis' in window) {
+            try {
+                window.speechSynthesis.resume();
+            } catch (e) {}
+        }
+    }
+
+    // Escuchar el primer gesto en la pantalla para activar el subsistema de audio móvil
+    ['click', 'touchstart', 'touchend', 'keydown'].forEach(evtName => {
+        document.addEventListener(evtName, unlockAudio, { passive: true });
+    });
+
+    // Detener cualquier audio activo (HTML5 Audio, fetch de TTS o SpeechSynthesis)
     function stopActiveAudio() {
-        if (currentAudioElement) {
+        if (ttsAbortController) {
+            try { ttsAbortController.abort(); } catch (e) {}
+            ttsAbortController = null;
+        }
+        if (sharedAudio) {
+            try {
+                sharedAudio.pause();
+                sharedAudio.currentTime = 0;
+                sharedAudio.removeAttribute('src');
+                sharedAudio.load();
+            } catch (e) {}
+        }
+        if (currentAudioElement && currentAudioElement !== sharedAudio) {
             try {
                 currentAudioElement.pause();
                 currentAudioElement.currentTime = 0;
+                currentAudioElement.removeAttribute('src');
+                currentAudioElement.load();
             } catch (e) {}
-            currentAudioElement = null;
         }
+        currentAudioElement = null;
+
         if ('speechSynthesis' in window) {
             try {
                 window.speechSynthesis.cancel();
@@ -60,6 +124,7 @@ const VoiceIntercom = (function() {
         }
         activeUtterance = null;
         window._activeUtterance = null;
+        isSpeaking = false;
     }
 
     function isResidentSpeaking() {
@@ -320,6 +385,9 @@ const VoiceIntercom = (function() {
 
         setTimeout(() => {
             try {
+                if (window.speechSynthesis.paused) {
+                    window.speechSynthesis.resume();
+                }
                 window.speechSynthesis.speak(utterance);
             } catch (e) {
                 console.warn('[VoiceIntercom] Excepción en speechSynthesis.speak:', e);
@@ -329,7 +397,12 @@ const VoiceIntercom = (function() {
     }
 
     // Vocalizar respuesta del residente con audio neuronal de alta fidelidad
-    function speak(text, gender = null, onFinishCallback = null) {
+    function speak(text, gender = null, force = false, onFinishCallback = null) {
+        if (typeof force === 'function') {
+            onFinishCallback = force;
+            force = false;
+        }
+
         const resolvedGender = getResidentGender(gender);
         currentGender = resolvedGender;
 
@@ -345,10 +418,6 @@ const VoiceIntercom = (function() {
             return;
         }
 
-        isSpeaking = true;
-        stopListening(true);
-        stopActiveAudio();
-
         // Limpiar texto de acotaciones entre corchetes [Abre la puerta] y marcas de formato
         const cleanText = text.replace(/\[.*?\]/g, '').replace(/[*_#`~]/g, '').trim();
         if (!cleanText) {
@@ -356,14 +425,71 @@ const VoiceIntercom = (function() {
             return;
         }
 
-        const isFemale = (resolvedGender === 'F');
+        // Prevenir duplicación si es exactamente el mismo texto ya procesado
+        if (!force && cleanText === lastSpokenText) {
+            console.log('[VoiceIntercom] Mensaje ya vocalizado o en proceso, omitiendo duplicado.');
+            return;
+        }
+        lastSpokenText = cleanText;
 
-        // 1. Intentar reproducción de audio neuronal MP3 desde Django (/tts/)
+        isSpeaking = true;
+        stopListening(true);
+        stopActiveAudio();
+
+        const isFemale = (resolvedGender === 'F');
+        const roleLabel = isFemale ? 'Residente (Voz Femenina)' : 'Residente (Voz Masculina)';
+
+        // Desbloquear audio si es posible
+        unlockAudio();
+
+        // 1. Obtener audio neuronal MP3 desde Django (/tts/) mediante fetch()
+        // Esto previene bloqueos por 204 No Content y evita colisiones de dos fuentes de audio simultáneas
         const ttsUrl = `/tts/?gender=${encodeURIComponent(resolvedGender)}&text=${encodeURIComponent(cleanText)}`;
-        const audio = new Audio();
+
+        ttsAbortController = new AbortController();
+        const signal = ttsAbortController.signal;
+
+        updateStatusBadge(`${roleLabel} preparando audio...`, 'amber');
+
+        fetch(ttsUrl, { signal })
+            .then(async response => {
+                if (!response.ok || response.status === 204) {
+                    throw new Error('TTS_FALLBACK_STATUS_' + response.status);
+                }
+                const blob = await response.blob();
+                if (!blob || blob.size < 64) {
+                    throw new Error('TTS_EMPTY_PAYLOAD');
+                }
+                const blobUrl = URL.createObjectURL(blob);
+                playBlobAudio(blobUrl, cleanText, resolvedGender, onFinishCallback);
+            })
+            .catch(err => {
+                if (err.name === 'AbortError') {
+                    return; // Cancelado explícitamente
+                }
+                console.warn('[VoiceIntercom] Servidor TTS no disponible o error:', err.message, '- Usando sintetizador local');
+                speakWebSpeechFallback(cleanText, resolvedGender, onFinishCallback);
+            });
+    }
+
+    function playBlobAudio(blobUrl, cleanText, resolvedGender, onFinishCallback) {
+        const audio = getSharedAudio();
         currentAudioElement = audio;
 
+        const isFemale = (resolvedGender === 'F');
+        const roleLabel = isFemale ? 'Residente (Voz Femenina)' : 'Residente (Voz Masculina)';
+
+        const cleanup = function() {
+            audio.onplay = null;
+            audio.onended = null;
+            audio.onerror = null;
+            try {
+                URL.revokeObjectURL(blobUrl);
+            } catch (e) {}
+        };
+
         const handleAudioEnd = function() {
+            cleanup();
             isSpeaking = false;
             currentAudioElement = null;
             setWaveVisualizer(false, 'idle');
@@ -381,32 +507,36 @@ const VoiceIntercom = (function() {
             }
         };
 
-        let didFallback = false;
-        const triggerFallback = function() {
-            if (didFallback) return;
-            didFallback = true;
-            if (currentAudioElement === audio) {
-                currentAudioElement = null;
-            }
-            speakWebSpeechFallback(cleanText, resolvedGender, onFinishCallback);
-        };
-
         audio.onplay = function() {
             isSpeaking = true;
             setWaveVisualizer(true, 'speaking');
-            const roleLabel = isFemale ? 'Residente (Voz Femenina)' : 'Residente (Voz Masculina)';
             updateStatusBadge(`${roleLabel} hablando...`, 'amber');
         };
 
         audio.onended = handleAudioEnd;
-        audio.onerror = function() {
-            triggerFallback();
+
+        audio.onerror = function(err) {
+            console.warn('[VoiceIntercom] Error en reproducción de audio blob:', err);
+            cleanup();
+            currentAudioElement = null;
+            speakWebSpeechFallback(cleanText, resolvedGender, onFinishCallback);
         };
 
-        audio.src = ttsUrl;
-        audio.play().catch(function(err) {
-            triggerFallback();
-        });
+        audio.src = blobUrl;
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(function(playErr) {
+                console.warn('[VoiceIntercom] Reproducción bloqueada por navegador:', playErr);
+                cleanup();
+                try {
+                    audio.pause();
+                    audio.removeAttribute('src');
+                    audio.load();
+                } catch (e) {}
+                currentAudioElement = null;
+                speakWebSpeechFallback(cleanText, resolvedGender, onFinishCallback);
+            });
+        }
     }
 
     // Inicializar SpeechRecognition (STT)
@@ -688,6 +818,18 @@ const VoiceIntercom = (function() {
         }
     }
 
+    // Inicialización al cargar la página por primera vez (evita autohabla indeseada y bloqueos de autoplay)
+    function initOnPageLoad() {
+        currentGender = getResidentGender();
+        const prospectMessages = document.querySelectorAll('.prospect-bubble-text');
+        if (prospectMessages.length > 0) {
+            const latestMsg = prospectMessages[prospectMessages.length - 1].textContent.trim();
+            if (latestMsg) {
+                lastSpokenText = latestMsg.replace(/\[.*?\]/g, '').replace(/[*_#`~]/g, '').trim();
+            }
+        }
+    }
+
     // Disparador cuando HTMX actualiza el chat
     function onChatContentSwapped() {
         const chatCard = document.getElementById('chat-card');
@@ -700,10 +842,10 @@ const VoiceIntercom = (function() {
         if (prospectMessages.length > 0) {
             const latestMsg = prospectMessages[prospectMessages.length - 1].textContent.trim();
             if (latestMsg) {
-                // Retardo de 200ms para permitir renderizado fluido del DOM antes de hablar
+                // Retardo breve para permitir renderizado fluido del DOM antes de hablar
                 setTimeout(() => {
-                    speak(latestMsg, currentGender);
-                }, 200);
+                    speak(latestMsg, currentGender, false);
+                }, 150);
             }
         } else {
             // No hay mensajes del prospecto aún (el vendedor está en el pórtico)
@@ -719,6 +861,7 @@ const VoiceIntercom = (function() {
 
     // Iniciar llamada/interacción tocando el timbre de la residencia
     function ringAndStart() {
+        unlockAudio();
         playDoorbell();
         currentGender = getResidentGender();
         updateStatusBadge('Timbre sonando...', 'amber');
@@ -734,6 +877,7 @@ const VoiceIntercom = (function() {
 
     // Iniciar abordaje a un comprador en tienda comercial
     function approachAndStart() {
+        unlockAudio();
         playStoreChime();
         currentGender = getResidentGender();
         updateStatusBadge('Abordaje iniciado en tienda...', 'amber');
@@ -757,10 +901,13 @@ const VoiceIntercom = (function() {
         toggleHandsFree,
         toggleMute,
         onChatContentSwapped,
+        initOnPageLoad,
         ringAndStart,
         approachAndStart,
         selectVoice,
-        getResidentGender
+        getResidentGender,
+        isHandsFreeMode: () => isHandsFree,
+        unlockAudio
     };
 })();
 

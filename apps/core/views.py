@@ -7,8 +7,8 @@ from apps.simulator.models import Product, Neighborhood, SimulationDay
 
 def dashboard(request):
     """
-    Vista principal: resumen de carrera del prospector, métricas acumuladas,
-    selección de campaña/producto y barrio para iniciar nueva jornada de cambaceo.
+    Vista principal: resumen de carrera del asesor comercial, métricas acumuladas,
+    selección de campaña/producto y barrio para iniciar nueva jornada de venta directa.
     """
     profile = ProspectorProfile.get_or_create_default()
     products = Product.objects.all()

@@ -214,7 +214,7 @@ class SingleScreenChatSimulatorTests(TestCase):
 
         # Verificar que el logo SVG está en el DOM
         self.assertIn('txu_door_logo.svg', content, "El logo SVG personalizado debe estar en la interfaz.")
-        self.assertIn('Logo TXU Energy Puerta a Puerta', content)
+        self.assertIn('Logo TXU Energy', content)
 
         # Verificar controles de modo claro / modo oscuro
         self.assertIn('id="theme-toggle-btn"', content)
@@ -453,6 +453,110 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertIn('Puerta', content)
         self.assertIn('Tienda', content)
         self.assertIn(reverse('simulator:set_prospecting_mode'), content)
+
+    def test_compute_chat_analytics_structure(self):
+        """Verifica que compute_chat_analytics genere un informe con todas las competencias y métricas."""
+        from apps.simulator.chat_engine import compute_chat_analytics
+        dummy_state = {
+            'status': 'SALE_CLOSED',
+            'archetype': 'IDEAL_LEAD',
+            'patience': 80,
+            'interest': 90,
+            'messages': [
+                {'sender': 'user', 'text': 'Buenas tardes, asesor oficial de TXU Energy con tarifa fija por contrato.'},
+                {'sender': 'prospect', 'text': 'Me interesa bastante.'},
+                {'sender': 'user', 'text': 'Excelente, revisemos su factura para calcular su 50% de descuento.'},
+                {'sender': 'prospect', 'text': 'Hagamos el cambio de una vez.'}
+            ]
+        }
+        analytics = compute_chat_analytics(dummy_state)
+        self.assertIn('overall_score', analytics)
+        self.assertGreaterEqual(analytics['overall_score'], 80)
+        self.assertIn('tier_label', analytics)
+        self.assertIn('status_label', analytics)
+        self.assertEqual(len(analytics['competencies']), 5)
+        for comp in analytics['competencies']:
+            self.assertIn('name', comp)
+            self.assertIn('score', comp)
+            self.assertIn('description', comp)
+        self.assertTrue(len(analytics['strengths']) > 0)
+        self.assertTrue(len(analytics['areas_for_improvement']) > 0)
+        self.assertIn('turns', analytics['metrics'])
+        self.assertEqual(analytics['metrics']['turns'], 2)
+
+    def test_finish_chat_view_htmx(self):
+        """Verifica que el endpoint finish_chat genere el reporte analítico por HTMX."""
+        self.client.get(reverse('simulator:chat_view'))
+        resp = self.client.post(reverse('simulator:finish_chat'), HTTP_HX_REQUEST='true')
+        self.assertEqual(resp.status_code, 200)
+        session_door = self.client.session.get('door_state')
+        self.assertIsNotNone(session_door)
+        self.assertIn('analytics', session_door)
+        content = resp.content.decode('utf-8')
+        self.assertIn('analytics-report-card', content)
+        self.assertIn('Informe Analítico de Desempeño Comercial', content)
+        self.assertIn('Puntaje Global', content)
+        self.assertIn('Evaluación de Competencias Clave', content)
+
+    def test_dynamic_alerts_and_colors_rendering(self):
+        """Verifica que las alertas de Oportunidad de Cierre y Riesgo de Rechazo se muestren ante los umbrales definidos."""
+        session = self.client.session
+        session['prospecting_mode'] = 'DOOR'
+        door = create_new_door(mode='DOOR')
+        door['interest'] = 75
+        door['patience'] = 20
+        session['door_state'] = door
+        session.save()
+
+        resp = self.client.get(reverse('simulator:chat_view'))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        self.assertIn('¡Cierre!', content)
+        self.assertIn('¡Riesgo!', content)
+        self.assertIn('bg-gradient-to-r from-emerald-500 to-teal-400', content)
+        self.assertIn('bg-gradient-to-r from-rose-600 to-rose-400', content)
+
+    def test_hints_toggle_button_and_hidden_popover(self):
+        """Verifica que las pistas tácticas estén ocultas en un popover y que se active mediante el botón Pistas."""
+        session = self.client.session
+        session['prospecting_mode'] = 'DOOR'
+        door = create_new_door(mode='DOOR')
+        door['status'] = 'IN_PROGRESS'
+        door['suggestions'] = ['Propuesta de prueba 1', 'Propuesta de prueba 2']
+        session['door_state'] = door
+        session.save()
+
+        resp = self.client.get(reverse('simulator:chat_view'))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        self.assertIn('id="btn-toggle-hints"', content)
+        self.assertIn('id="hints-popover"', content)
+        self.assertIn('toggleHintsMenu()', content)
+        self.assertIn('Concluir y Evaluar', content)
+
+    def test_no_duplicate_intercom_start_button(self):
+        """Verifica que no exista botón redundante de tocar timbre o abordar en la barra de intercomunicador."""
+        session = self.client.session
+        session['prospecting_mode'] = 'DOOR'
+        door = create_new_door(mode='DOOR')
+        session['door_state'] = door
+        session.save()
+
+        resp = self.client.get(reverse('simulator:chat_view'))
+        content = resp.content.decode('utf-8')
+        self.assertIn('Manos Libres: Activo', content)
+        self.assertIn('Voz Activa', content)
+        self.assertIn('Tocar Timbre para Iniciar', content)
+        self.assertEqual(content.count('Tocar Timbre para Iniciar'), 1)
+
+    def test_zero_emojis_and_professional_terms_in_chat(self):
+        """Verifica la ausencia de emojis y términos no profesionales en la vista del simulador."""
+        resp = self.client.get(reverse('simulator:chat_view'))
+        content = resp.content.decode('utf-8')
+        self.assertNotIn('prospección en frío', content.lower())
+        self.assertNotIn('cambaceo', content.lower())
+        emoji_pattern = re.compile(r'[\U00010000-\U0010ffff]', flags=re.UNICODE)
+        self.assertFalse(bool(emoji_pattern.search(content)), "No deben existir emojis en la interfaz.")
 
 
 

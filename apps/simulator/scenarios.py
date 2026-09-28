@@ -62,7 +62,7 @@ SCENARIOS = {
                         'interest_change': 0,
                         'next_node': 'door_rejected_polite',
                         'tactic': 'Retirada Cortés',
-                        'coach_feedback': 'Bien al no desgastarte ni confrontar. En cambaceo la energía emocional es tu activo más valioso; cuando la puerta se pierde, saluda con elegancia y avanza.'
+                        'coach_feedback': 'Bien al no desgastarte ni confrontar. En venta directa la energía emocional es tu activo más valioso; cuando la puerta se pierde, saluda con elegancia y avanza.'
                     }
                 ]
             },
@@ -229,7 +229,7 @@ SCENARIOS = {
                         'interest_change': +35,
                         'next_node': 'skep_receipt_check',
                         'tactic': 'Puente Solución + Revisión de Factura',
-                        'coach_feedback': 'Pedir el recibo actual es la técnica reina del cambaceo: te da el nombre, el gasto exacto y la fecha de corte para cerrar.'
+                        'coach_feedback': 'Pedir el recibo actual es la técnica fundamental de la venta directa: te da el nombre, el gasto exacto y la fecha de corte para cerrar.'
                     },
                     {
                         'id': 'opt_attack_competition',
@@ -318,7 +318,7 @@ SCENARIOS = {
                         'interest_change': -20,
                         'next_node': 'polite_lost',
                         'tactic': 'Entrega Sumisa de Material (Cero Efectividad)',
-                        'coach_feedback': '¡Caíste en la objeción más dulce y letal del cambaceo! Te sonrió, te dijo que sí, te pidió el volante y nunca te llamará. Regla: siempre ofrece una pregunta de calificación antes de soltar el folleto.'
+                        'coach_feedback': '¡Caíste en la objeción más dulce y letal en venta directa! Te sonrió, te dijo que sí, te pidió el volante y nunca te llamará. Regla: siempre ofrece una pregunta de calificación antes de soltar el folleto.'
                     },
                     {
                         'id': 'opt_redirect_question',
@@ -457,7 +457,7 @@ SCENARIOS = {
                         'interest_change': +40,
                         'next_node': 'success_sale',
                         'tactic': 'Solución de Emergencia Inmediata',
-                        'coach_feedback': '¡Triunfo legendario de cambaceo! Transformaste un grito hostil en una venta cerrada resolviendo su dolor urgente.'
+                        'coach_feedback': '¡Gran cierre de venta directa! Transformaste un grito hostil en una venta cerrada resolviendo su dolor urgente.'
                     }
                 ]
             },

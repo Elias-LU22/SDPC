@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}TXU Energy - Simulador de Prospección Comercial{% endblock %}</title>
+    <title>{% block title %}TXU Energy - Simulador de Ventas y Asesoría Comercial{% endblock %}</title>
     <!-- Script de Inicialización Temprana: Modo Claro es el predeterminado -->
     <script>
         (function() {
@@ -59,6 +59,17 @@
     <!-- Motor de Voz e Intercomunicador Puerta a Puerta -->
     <script src="{% static 'js/voice_intercom.js' %}"></script>
     <style>
+        /* Adaptación móvil y altura de pantalla dinámica (100dvh) */
+        html, body {
+            height: 100%;
+            height: 100dvh;
+        }
+        @media (max-width: 640px) {
+            body {
+                overflow: hidden;
+            }
+        }
+
         /* Base: Modo Claro (Predeterminado) */
         body {
             font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -256,6 +267,31 @@
             }
         }
 
+        function toggleHintsMenu(forceState) {
+            const popover = document.getElementById('hints-popover');
+            const chevron = document.getElementById('hints-chevron');
+            if (!popover) return;
+            const isHidden = popover.classList.contains('hidden');
+            const shouldShow = (typeof forceState === 'boolean') ? forceState : isHidden;
+            if (shouldShow) {
+                popover.classList.remove('hidden');
+                if (chevron) chevron.classList.add('rotate-180');
+            } else {
+                popover.classList.add('hidden');
+                if (chevron) chevron.classList.remove('rotate-180');
+            }
+        }
+
+        document.addEventListener('click', function(e) {
+            const popover = document.getElementById('hints-popover');
+            const btn = document.getElementById('btn-toggle-hints');
+            if (popover && !popover.classList.contains('hidden') && btn) {
+                if (!popover.contains(e.target) && !btn.contains(e.target)) {
+                    toggleHintsMenu(false);
+                }
+            }
+        });
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
@@ -297,7 +333,11 @@
             scrollChatToBottom(false);
             updateThemeUI(document.documentElement.classList.contains('dark'));
             if (typeof VoiceIntercom !== 'undefined') {
-                VoiceIntercom.onChatContentSwapped();
+                if (VoiceIntercom.initOnPageLoad) {
+                    VoiceIntercom.initOnPageLoad();
+                } else {
+                    VoiceIntercom.onChatContentSwapped();
+                }
             }
         });
 
@@ -416,11 +456,18 @@
         document.body.addEventListener('htmx:afterSwap', function(evt) {
             scrollChatToBottom(true);
             const inputField = document.getElementById('message-input');
+            const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth < 768);
+            const isHandsFree = (typeof VoiceIntercom !== 'undefined' && VoiceIntercom.isHandsFreeMode && VoiceIntercom.isHandsFreeMode());
+
             if (inputField) {
                 inputField.readOnly = false;
                 inputField.classList.remove('opacity-70');
                 inputField.value = '';
-                inputField.focus();
+                if (!isTouch && !isHandsFree) {
+                    inputField.focus();
+                } else {
+                    inputField.blur();
+                }
             }
             if (typeof VoiceIntercom !== 'undefined') {
                 VoiceIntercom.onChatContentSwapped();

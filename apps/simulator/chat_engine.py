@@ -428,10 +428,182 @@ create_new_encounter = create_new_door
 
 
 
+def compute_chat_analytics(door_state):
+    """
+    Genera un informe analítico integral de desempeño comercial al concluir la interacción o cuando
+    el usuario solicita finalizar la sesión.
+    Calcula:
+    - Puntuación global del desempeño (0-100).
+    - Desglose porcentual en 5 competencias comerciales clave.
+    - Fortalezas demostradas en el diálogo.
+    - Áreas de mejora prioritarias con recomendaciones accionables.
+    - Métricas clave de la sesión (turnos, deltas de interés y paciencia, resultado final).
+    """
+    status = door_state.get("status", "IN_PROGRESS")
+    messages = door_state.get("messages", [])
+    user_messages = [m["text"] for m in messages if m.get("sender") == "user"]
+    combined_user_text = " ".join(user_messages).lower()
+    first_msg = user_messages[0].lower().strip() if user_messages else ""
+    turns = len(user_messages)
+
+    arch_key = door_state.get("archetype", "POLITE_EVASIVE")
+    arch_data = ARCHETYPE_DETAILS.get(arch_key, {})
+    initial_patience = arch_data.get("initial_patience", 50)
+    initial_interest = arch_data.get("initial_interest", 20)
+    final_patience = door_state.get("patience", initial_patience)
+    final_interest = door_state.get("interest", initial_interest)
+    patience_delta = final_patience - initial_patience
+    interest_delta = final_interest - initial_interest
+
+    # 1. Competencia: Gancho de Apertura y Presentación (0-100)
+    hook_score = 40
+    if first_msg:
+        words = first_msg.split()
+        if len(words) <= 3 and any(first_msg.startswith(w) for w in ["hola", "buenas", "que tal"]):
+            hook_score = 25
+        else:
+            if any(k in first_msg for k in ["txu", "energy", "compañía", "empresa", "represento"]):
+                hook_score += 25
+            if any(k in first_msg for k in ["15 segundo", "10 segundo", "un minuto", "rápido", "no le quito", "breve"]):
+                hook_score += 20
+            if any(k in first_msg for k in ["calor", "aire", "descuento", "verano", "recibo", "factura", "tarjeta", "gift card", "50%"]):
+                hook_score += 20
+            if any(k in first_msg for k in ["buenas", "hola", "mucho gusto", "disculpe", "vecin", "caballero"]):
+                hook_score += 15
+    hook_score = max(20, min(98, hook_score))
+
+    # 2. Competencia: Conexión y Empatía (Rapport) (0-100)
+    empathy_score = 50
+    empathy_matches = len(re.findall(r'(entiendo|comprendo|tiene raz[oó]n|disculpe|gracias|con gusto|vecin|caballero|se[ñn]or|tranquil|con calma|no se preocupe|excelente)', combined_user_text))
+    empathy_score += min(30, empathy_matches * 10)
+    if patience_delta >= 10:
+        empathy_score += 20
+    elif patience_delta >= 0:
+        empathy_score += 10
+    elif patience_delta <= -20:
+        empathy_score -= 20
+    empathy_score = max(25, min(98, empathy_score))
+
+    # 3. Competencia: Diagnóstico y Calificación Comercial (0-100)
+    diagnostic_score = 45
+    diag_matches = len(re.findall(r'(cu[aá]nto|recibo|factura|kwh|centav|oncor|compa[ñn][ií]a|contrato|aire|tarifa|fija|gasto|verano|\?)', combined_user_text))
+    diagnostic_score += min(45, diag_matches * 8)
+    diagnostic_score = max(30, min(96, diagnostic_score))
+
+    # 4. Competencia: Manejo de Objeciones (0-100)
+    objection_score = 50
+    if status == "SALE_CLOSED":
+        objection_score = 95
+    elif status == "APPOINTMENT":
+        objection_score = 85
+    elif status == "REJECTED":
+        objection_score = 35
+    else:
+        obj_matches = len(re.findall(r'(garant[ií]a|60 d[ií]as|sin compromiso|oncor|mismos postes|season pass|free nights|descuento|subsidio|comparat)', combined_user_text))
+        objection_score += min(35, obj_matches * 10)
+    objection_score = max(25, min(98, objection_score))
+
+    # 5. Competencia: Asertividad de Cierre (0-100)
+    if status == "SALE_CLOSED":
+        closing_score = 98
+    elif status == "APPOINTMENT":
+        closing_score = 86
+    elif status == "REJECTED":
+        closing_score = 30
+    else:
+        closing_score = min(80, max(35, int(final_interest * 0.9)))
+
+    # Puntuación Global Ponderada (0-100)
+    raw_score = int(
+        hook_score * 0.20 +
+        empathy_score * 0.20 +
+        diagnostic_score * 0.20 +
+        objection_score * 0.20 +
+        closing_score * 0.20
+    )
+
+    if status == "SALE_CLOSED":
+        overall_score = max(88, min(100, raw_score))
+        tier_label = "Cierre Maestro de Venta"
+        status_label = "Venta Cerrada con Éxito"
+        status_badge_class = "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30"
+    elif status == "APPOINTMENT":
+        overall_score = max(75, min(87, raw_score))
+        tier_label = "Cita Comercial Calificada"
+        status_label = "Cita Comercial Agendada"
+        status_badge_class = "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30"
+    elif status == "REJECTED":
+        overall_score = min(58, raw_score)
+        tier_label = "Oportunidad de Aprendizaje"
+        status_label = "Contacto Concluido sin Cierre"
+        status_badge_class = "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30"
+    else: # COMPLETED or IN_PROGRESS
+        overall_score = max(40, min(90, raw_score))
+        tier_label = "Sesión Finalizada para Evaluación"
+        status_label = "Evaluación de Desempeño Comercial"
+        status_badge_class = "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30"
+
+    # Fortalezas observadas
+    strengths = []
+    if hook_score >= 70:
+        strengths.append("Gancho de entrada efectivo con identificación corporativa de TXU Energy y marco de tiempo.")
+    if empathy_score >= 70:
+        strengths.append("Excelente conexión humana, cortesía y contención emocional de la objeción.")
+    if diagnostic_score >= 65:
+        strengths.append("Preguntas de diagnóstico acertadas sobre el impacto del calor en la factura eléctrica.")
+    if objection_score >= 75:
+        strengths.append("Sólido manejo de objeciones destacando los beneficios clave de la tarifa protegida.")
+    if closing_score >= 80:
+        strengths.append("Asertividad en la propuesta de valor y aseguramiento del siguiente paso comercial.")
+    if not strengths:
+        strengths.append("Mantuvo la compostura profesional y el respeto durante todo el diálogo.")
+        strengths.append("Iniciativa para interactuar y explorar las necesidades del cliente.")
+
+    # Áreas de mejora prioritarias
+    areas_for_improvement = []
+    if hook_score < 70:
+        areas_for_improvement.append("Fortalece la apertura: di tu nombre, TXU Energy y ofrece un marco de 15 segundos en tu primera frase para capturar la atención.")
+    if diagnostic_score < 65:
+        areas_for_improvement.append("Indaga antes de ofertar: pregunta cuántos centavos por kWh pagan o cuánto subió el recibo con el aire acondicionado.")
+    if empathy_score < 65:
+        areas_for_improvement.append("Aumenta la empatía: valida primero la queja del cliente ('lo entiendo perfectamente', 'tiene toda la razón') antes de argumentar.")
+    if objection_score < 75 and status != "SALE_CLOSED":
+        areas_for_improvement.append("Manejo de evasivas: si piden folleto o tienen prisa, no cedas el control; pide 30 segundos para revisar la factura o agenda una hora precisa.")
+    if closing_score < 75 and status != "SALE_CLOSED":
+        areas_for_improvement.append("Llamado al cierre: menciona la garantía de satisfacción de 60 días sin penalización para eliminar cualquier sensación de riesgo.")
+    if not areas_for_improvement:
+        areas_for_improvement.append("Continúa practicando cierres en menos turnos para optimizar tu tiempo de atención.")
+        areas_for_improvement.append("Personaliza aún más las ventajas según el perfil tecnológico o ahorrador de cada cliente.")
+
+    return {
+        "overall_score": overall_score,
+        "tier_label": tier_label,
+        "status_label": status_label,
+        "status_badge_class": status_badge_class,
+        "competencies": [
+            {"name": "Gancho y Apertura", "score": hook_score, "description": "Claridad en tiempo, empresa e impacto en los primeros 15s"},
+            {"name": "Conexión y Empatía", "score": empathy_score, "description": "Rapport, escucha activa y validación de objeciones"},
+            {"name": "Diagnóstico Comercial", "score": diagnostic_score, "description": "Preguntas sobre tarifa, consumo y factura eléctrica"},
+            {"name": "Manejo de Objeciones", "score": objection_score, "description": "Superación de barreras (folletos, prisa, proveedor actual)"},
+            {"name": "Asertividad de Cierre", "score": closing_score, "description": "Llamado a la acción, revisión de factura y garantía TXU"}
+        ],
+        "strengths": strengths[:3],
+        "areas_for_improvement": areas_for_improvement[:3],
+        "metrics": {
+            "turns": turns,
+            "final_patience": final_patience,
+            "final_interest": final_interest,
+            "patience_delta_str": f"+{patience_delta}%" if patience_delta >= 0 else f"{patience_delta}%",
+            "interest_delta_str": f"+{interest_delta}%" if interest_delta >= 0 else f"{interest_delta}%",
+        }
+    }
+
+
+
 def evaluate_response_local(user_text, door_state):
     """
     Evalúa la respuesta del asesor comercial de TXU Energy usando el motor
-    local de respaldo con reglas de prospección y arquetipos residenciales.
+    local de respaldo con reglas de asesoría comercial y arquetipos residenciales.
     Diferencia con precisión entre el gancho de apertura (Turno 0) y los
     turnos intermedios o de cierre (Turno >= 1) para evitar confusiones de contexto.
     """
@@ -575,7 +747,7 @@ def evaluate_response_local(user_text, door_state):
                     "HOSTILE": {
                         "patience": -15, "interest": -5,
                         "reply": "¿Sí? ¿Quién es usted y qué se le ofrece? No me haga salir a la puerta con este calorón para decirme solo 'hola'.",
-                        "coach": "Un simple saludo no es un gancho comercial. En prospección en frío, dejar vacíos de información ante un prospecto hostil dispara su impaciencia. Debes presentarte con tu nombre, la empresa (TXU Energy) y un marco de tiempo de inmediato.",
+                        "coach": "Un simple saludo no es un gancho comercial. En el primer contacto comercial, dejar vacíos de información ante un prospecto hostil dispara su impaciencia. Debes presentarte con tu nombre, la empresa (TXU Energy) y un marco de tiempo de inmediato.",
                         "suggestions": [
                             "Una disculpa por la interrupción: soy asesor oficial de TXU Energy, solo 15 segundos para no quitarle tiempo con este calor.",
                             "Buenas tardes, disculpe la molestia. Vengo de TXU Energy con los vecinos para revisar el impacto del calor en el recibo de luz."
@@ -1202,7 +1374,7 @@ def evaluate_response_local(user_text, door_state):
                 interest_change = +25
                 door_state["status"] = "APPOINTMENT"
                 reply = "Mi pareja llega a las 7:00 PM del trabajo. Si pasa a esa hora puntual con gusto sacamos la factura de luz y lo revisan."
-                coach = "Excelente calificación de rol. En cambaceo es clave no desgastar la oferta con quien no es titular de la cuenta ante ERCOT."
+                coach = "Excelente calificación de rol. En venta directa es clave no desgastar la oferta con quien no es titular de la cuenta ante ERCOT."
                 new_suggestions = [
                     "A las 7:00 PM en punto estaré aquí para revisar la factura con ustedes en 3 minutos. Muchas gracias.",
                     "Perfecto, anotado en mi agenda a las 7:00 PM. Que pase buena tarde."
@@ -1475,6 +1647,9 @@ def evaluate_response_local(user_text, door_state):
     if new_suggestions and door_state["status"] == "IN_PROGRESS":
         door_state["suggestions"] = new_suggestions
 
+    if door_state["status"] in ["SALE_CLOSED", "APPOINTMENT", "REJECTED"]:
+        door_state["analytics"] = compute_chat_analytics(door_state)
+
     return door_state
 
 
@@ -1550,6 +1725,9 @@ def evaluate_response(user_text, door_state):
         })
         if llm_result.get("suggestions") and door_state["status"] == "IN_PROGRESS":
             door_state["suggestions"] = llm_result["suggestions"]
+
+        if door_state["status"] in ["SALE_CLOSED", "APPOINTMENT", "REJECTED"]:
+            door_state["analytics"] = compute_chat_analytics(door_state)
 
         return door_state
 

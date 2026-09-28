@@ -3,11 +3,11 @@
 {% include 'mode_selector_bar.html' with is_oob=True %}
 {% endif %}
 
-<!-- Panel Principal de Simulación de Prospección - Liquid Glass Edition -->
-<div id="chat-card" data-resident="{{ door.resident_name }}" data-gender="{{ door.resident_gender }}" data-encounter="{{ door.encounter_type }}" class="flex flex-col h-full liquid-window rounded-3xl overflow-hidden">
+<!-- Panel Principal de Simulación de Asesoría Comercial y Venta Directa - Liquid Glass Edition -->
+<div id="chat-card" data-resident="{{ door.resident_name }}" data-gender="{{ door.resident_gender }}" data-encounter="{{ door.encounter_type }}" class="flex flex-col h-full liquid-window rounded-none sm:rounded-3xl overflow-hidden border-0 sm:border">
 
     <!-- Encabezado de la Puerta o Tienda y Prospecto -->
-    <header class="bg-white/60 dark:bg-slate-950/40 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/5 px-5 md:px-7 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 flex-shrink-0">
+    <header class="bg-white/60 dark:bg-slate-950/40 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/5 px-3 sm:px-6 py-2 sm:py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4 flex-shrink-0">
         <div class="flex items-center space-x-3.5">
             <div class="relative w-12 h-12 rounded-2xl bg-teal-500/15 dark:bg-gradient-to-br dark:from-teal-500/20 dark:to-emerald-500/10 border border-teal-500/30 text-teal-600 dark:text-teal-300 flex items-center justify-center flex-shrink-0 shadow-inner">
                 {% if door.encounter_type == 'STORE' %}
@@ -50,38 +50,44 @@
         <!-- Métricas en Vivo y Acciones -->
         <div class="flex flex-wrap items-center gap-4 sm:gap-6">
             <!-- Indicador de Paciencia -->
-            <div class="w-28 sm:w-36">
+            <div class="w-32 sm:w-40">
                 <div class="flex justify-between items-center text-xs mb-1.5">
                     <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1 text-[11px]">
                         <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        Paciencia
+                        <span>Paciencia</span>
+                        {% if door.patience < 25 %}
+                            <span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse ml-0.5 whitespace-nowrap">¡Riesgo!</span>
+                        {% endif %}
                     </span>
-                    <span class="font-mono font-bold text-xs {% if door.patience > 50 %}text-teal-600 dark:text-teal-400{% elif door.patience > 25 %}text-amber-500 dark:text-amber-400{% else %}text-rose-500 dark:text-rose-400{% endif %}">
+                    <span class="font-mono font-bold text-xs {% if door.patience >= 60 %}text-teal-600 dark:text-teal-400{% elif door.patience >= 25 %}text-amber-500 dark:text-amber-400{% else %}text-rose-600 dark:text-rose-400{% endif %}">
                         {{ door.patience }}%
                     </span>
                 </div>
                 <div class="w-full bg-slate-200 dark:bg-slate-950/80 rounded-full h-1.5 overflow-hidden p-0.5 border border-slate-300/60 dark:border-white/5">
-                    <div class="h-full rounded-full transition-all duration-500 {% if door.patience > 50 %}bg-gradient-to-r from-teal-500 to-emerald-400{% elif door.patience > 25 %}bg-gradient-to-r from-amber-500 to-amber-400{% else %}bg-gradient-to-r from-rose-500 to-rose-400{% endif %}" style="width: {{ door.patience }}%"></div>
+                    <div class="h-full rounded-full transition-all duration-500 {% if door.patience >= 60 %}bg-gradient-to-r from-teal-500 to-emerald-400{% elif door.patience >= 25 %}bg-gradient-to-r from-amber-500 to-amber-400{% else %}bg-gradient-to-r from-rose-600 to-rose-400{% endif %}" style="width: {{ door.patience }}%"></div>
                 </div>
             </div>
 
             <!-- Indicador de Interés -->
-            <div class="w-28 sm:w-36">
+            <div class="w-32 sm:w-44">
                 <div class="flex justify-between items-center text-xs mb-1.5">
                     <span class="text-slate-500 dark:text-slate-400 flex items-center gap-1 text-[11px]">
-                        <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg class="w-3.5 h-3.5 {% if door.interest >= 70 %}text-emerald-500 dark:text-emerald-400{% elif door.interest >= 35 %}text-teal-600 dark:text-teal-400{% else %}text-amber-500 dark:text-amber-400{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
-                        Interés
+                        <span>Interés</span>
+                        {% if door.interest >= 70 %}
+                            <span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 animate-pulse ml-0.5 whitespace-nowrap">¡Cierre!</span>
+                        {% endif %}
                     </span>
-                    <span class="font-mono font-bold text-xs text-teal-600 dark:text-teal-400">
+                    <span class="font-mono font-bold text-xs {% if door.interest >= 70 %}text-emerald-600 dark:text-emerald-400{% elif door.interest >= 35 %}text-teal-600 dark:text-teal-400{% else %}text-amber-500 dark:text-amber-400{% endif %}">
                         {{ door.interest }}%
                     </span>
                 </div>
                 <div class="w-full bg-slate-200 dark:bg-slate-950/80 rounded-full h-1.5 overflow-hidden p-0.5 border border-slate-300/60 dark:border-white/5">
-                    <div class="bg-gradient-to-r from-teal-500 to-cyan-400 h-full rounded-full transition-all duration-500" style="width: {{ door.interest }}%"></div>
+                    <div class="h-full rounded-full transition-all duration-500 {% if door.interest >= 70 %}bg-gradient-to-r from-emerald-500 to-teal-400{% elif door.interest >= 35 %}bg-gradient-to-r from-teal-500 to-cyan-400{% else %}bg-gradient-to-r from-amber-500 to-amber-400{% endif %}" style="width: {{ door.interest }}%"></div>
                 </div>
             </div>
 
@@ -111,8 +117,8 @@
     </header>
 
     <!-- Barra del Intercomunicador de Voz en Vivo -->
-    <div class="bg-slate-100/70 dark:bg-slate-950/50 backdrop-blur-md border-b border-slate-200/70 dark:border-white/5 px-5 md:px-7 py-2.5 flex flex-wrap items-center justify-between gap-3 flex-shrink-0 text-xs">
-        <div class="flex items-center gap-3">
+    <div class="bg-slate-100/70 dark:bg-slate-950/50 backdrop-blur-md border-b border-slate-200/70 dark:border-white/5 px-3 sm:px-6 py-1.5 sm:py-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3 flex-shrink-0 text-xs">
+        <div class="flex items-center gap-2 sm:gap-3">
             <!-- Indicador de Estado y Visualizador de Ondas -->
             <div class="flex items-center gap-2">
                 <span id="intercom-status-dot" class="w-2.5 h-2.5 rounded-full bg-teal-500 dark:bg-teal-400"></span>
@@ -120,7 +126,7 @@
             </div>
 
             <!-- Visualizador de Ondas Sonoras -->
-            <div id="voice-wave-container" class="flex items-center gap-1 h-6 px-3 bg-white/80 dark:bg-slate-950/60 rounded-full border border-slate-200 dark:border-white/5 shadow-inner">
+            <div id="voice-wave-container" class="flex items-center gap-1 h-6 px-2.5 sm:px-3 bg-white/80 dark:bg-slate-950/60 rounded-full border border-slate-200 dark:border-white/5 shadow-inner">
                 <div class="wave-bar w-1 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full transition-all duration-150"></div>
                 <div class="wave-bar w-1 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full transition-all duration-150"></div>
                 <div class="wave-bar w-1 h-1.5 bg-slate-300 dark:bg-slate-700 rounded-full transition-all duration-150"></div>
@@ -130,32 +136,14 @@
         </div>
 
         <!-- Controles Rápidos de Voz -->
-        <div class="flex items-center gap-2">
-            {% if door.encounter_type == 'STORE' %}
-                <!-- Abordar Comprador (Tienda) -->
-                <button type="button" hx-post="{% url 'simulator:ring_doorbell' %}" hx-target="#chat-container" hx-swap="innerHTML" onclick="VoiceIntercom.approachAndStart()" title="Abordar comprador en tienda y activar micrófono" class="liquid-pill px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs">
-                    <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-                    </svg>
-                    <span>Abordar Comprador</span>
-                </button>
-            {% else %}
-                <!-- Tocar Timbre (Puerta Residencial) -->
-                <button type="button" hx-post="{% url 'simulator:ring_doorbell' %}" hx-target="#chat-container" hx-swap="innerHTML" onclick="VoiceIntercom.ringAndStart()" title="Tocar timbre de la casa y activar micrófono" class="liquid-pill px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs">
-                    <svg class="w-3.5 h-3.5 text-amber-500 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                    </svg>
-                    <span>Tocar Timbre</span>
-                </button>
-            {% endif %}
-
+        <div class="flex items-center gap-1.5 sm:gap-2">
             <!-- Conmutar Manos Libres -->
-            <button type="button" id="toggle-handsfree-btn" onclick="VoiceIntercom.toggleHandsFree()" title="Conversación continua automática" class="liquid-pill px-3 py-1.5 rounded-full text-teal-700 dark:text-teal-300 border-teal-500/30 bg-teal-500/10 dark:bg-teal-950/40 text-xs font-medium">
+            <button type="button" id="toggle-handsfree-btn" onclick="VoiceIntercom.toggleHandsFree()" title="Conversación continua automática" class="liquid-pill px-2.5 sm:px-3 py-1.5 rounded-full text-teal-700 dark:text-teal-300 border-teal-500/30 bg-teal-500/10 dark:bg-teal-950/40 text-xs font-medium">
                 Manos Libres: Activo
             </button>
 
             <!-- Conmutar Silencio de Audio -->
-            <button type="button" id="toggle-mute-btn" onclick="VoiceIntercom.toggleMute()" title="Silenciar o activar la voz del residente o comprador" class="liquid-pill px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs">
+            <button type="button" id="toggle-mute-btn" onclick="VoiceIntercom.toggleMute()" title="Silenciar o activar la voz del residente o comprador" class="liquid-pill px-2.5 sm:px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs">
                 <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
                 </svg>
@@ -166,7 +154,7 @@
 
 
     <!-- Flujo de Mensajes del Chat -->
-    <div id="chat-stream" class="flex-1 p-4 sm:p-6 md:p-7 overflow-y-auto space-y-6 custom-scrollbar bg-slate-50/50 dark:bg-slate-950/20">
+    <div id="chat-stream" class="flex-1 p-3 sm:p-6 md:p-7 overflow-y-auto space-y-4 sm:space-y-6 custom-scrollbar bg-slate-50/50 dark:bg-slate-950/20">
         
         <!-- Estado Inicial: El vendedor debe abordar al comprador (Tienda) o tocar el timbre (Puerta) para iniciar -->
         {% if not door.messages and not door.doorbell_rung %}
@@ -276,7 +264,7 @@
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ door.resident_name }}</span>
                             <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5">Residente</span>
-                            <button type="button" onclick="VoiceIntercom.speak('{{ msg.text|escapejs }}', '{{ door.resident_gender }}')" title="Escuchar respuesta en voz alta" class="text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 transition p-1 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/5">
+                            <button type="button" onclick="VoiceIntercom.speak('{{ msg.text|escapejs }}', '{{ door.resident_gender }}', true)" title="Escuchar respuesta en voz alta" class="text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 transition p-1 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/5">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.536 8.464a5 5 0 010 7.072M12 6v12l-4-4H4V10h4l4-4z"/>
                                 </svg>
@@ -338,8 +326,147 @@
             {% endif %}
         {% endfor %}
 
-        <!-- Banners de Conclusión de la Interacción -->
-        {% if door.status == 'SALE_CLOSED' %}
+        <!-- Informe Analítico de Desempeño Comercial y Banners de Conclusión -->
+        {% if door.analytics %}
+            <div id="analytics-report-card" class="liquid-card border border-teal-500/30 dark:border-teal-500/20 p-5 sm:p-7 rounded-3xl max-w-3xl mx-auto my-6 shadow-2xl shadow-teal-500/5 space-y-6 animate-fade-in">
+                <!-- Encabezado del Informe -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200/80 dark:border-white/10 pb-5">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full border {{ door.analytics.status_badge_class }}">
+                                {{ door.analytics.status_label }}
+                            </span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                • {{ door.analytics.tier_label }}
+                            </span>
+                        </div>
+                        <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                            Informe Analítico de Desempeño Comercial
+                        </h2>
+                        <p class="text-xs text-slate-600 dark:text-slate-400">
+                            Evaluación objetiva de competencias en diálogo con <strong class="text-slate-800 dark:text-slate-200">{{ door.resident_name }}</strong> ({{ door.archetype_title }}).
+                        </p>
+                    </div>
+
+                    <!-- Calificación Global -->
+                    <div class="flex-shrink-0 text-center px-4 py-2.5 rounded-2xl bg-gradient-to-br from-teal-500/10 to-teal-500/20 border border-teal-500/30 shadow-inner">
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300">Puntaje Global</div>
+                        <div class="text-3xl font-extrabold font-mono text-teal-700 dark:text-teal-200">{{ door.analytics.overall_score }}<span class="text-xs text-teal-600/70 dark:text-teal-400 font-normal">/100</span></div>
+                    </div>
+                </div>
+
+                <!-- Desglose de Competencias Comerciales -->
+                <div class="space-y-3">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        <span>Evaluación de Competencias Clave</span>
+                    </h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {% for comp in door.analytics.competencies %}
+                            <div class="p-3.5 rounded-2xl bg-white/60 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/5 space-y-1.5">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="font-bold text-slate-800 dark:text-slate-200">{{ comp.name }}</span>
+                                    <span class="font-mono font-bold {% if comp.score >= 75 %}text-teal-600 dark:text-teal-400{% elif comp.score >= 50 %}text-amber-500 dark:text-amber-400{% else %}text-rose-500 dark:text-rose-400{% endif %}">
+                                        {{ comp.score }}%
+                                    </span>
+                                </div>
+                                <div class="w-full bg-slate-200 dark:bg-slate-950 rounded-full h-1.5 overflow-hidden">
+                                    <div class="h-full rounded-full transition-all duration-500 {% if comp.score >= 75 %}bg-gradient-to-r from-teal-500 to-emerald-400{% elif comp.score >= 50 %}bg-gradient-to-r from-amber-500 to-amber-400{% else %}bg-gradient-to-r from-rose-500 to-rose-400{% endif %}" style="width: {{ comp.score }}%"></div>
+                                </div>
+                                <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                                    {{ comp.description }}
+                                </p>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Fortalezas y Áreas de Mejora -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Fortalezas Demostradas -->
+                    <div class="p-4 rounded-2xl bg-teal-50/60 dark:bg-teal-950/20 border border-teal-500/20 space-y-2.5">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-teal-800 dark:text-teal-300">
+                            <svg class="w-4 h-4 text-teal-600 dark:text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span>Fortalezas Demostradas</span>
+                        </div>
+                        <ul class="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                            {% for strength in door.analytics.strengths %}
+                                <li class="flex items-start gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-teal-500 mt-1.5 flex-shrink-0"></span>
+                                    <span>{{ strength }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+
+                    <!-- Áreas de Mejora Prioritarias -->
+                    <div class="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-500/20 space-y-2.5">
+                        <div class="flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-300">
+                            <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                            </svg>
+                            <span>Áreas de Mejora Prioritarias</span>
+                        </div>
+                        <ul class="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
+                            {% for area in door.analytics.areas_for_improvement %}
+                                <li class="flex items-start gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"></span>
+                                    <span>{{ area }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Métricas de la Sesión -->
+                <div class="p-3.5 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs">
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-500 dark:text-slate-400">Intercambios:</span>
+                        <strong class="font-mono text-slate-800 dark:text-slate-200">{{ door.analytics.metrics.turns }}</strong>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-500 dark:text-slate-400">Variación Interés:</span>
+                        <strong class="font-mono text-teal-600 dark:text-teal-400">{{ door.analytics.metrics.interest_delta_str }}</strong>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-500 dark:text-slate-400">Variación Paciencia:</span>
+                        <strong class="font-mono text-amber-600 dark:text-amber-400">{{ door.analytics.metrics.patience_delta_str }}</strong>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-slate-500 dark:text-slate-400">Interés Final:</span>
+                        <strong class="font-mono text-teal-600 dark:text-teal-400">{{ door.analytics.metrics.final_interest }}%</strong>
+                    </div>
+                </div>
+
+                <!-- Acciones del Reporte -->
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+                    <form hx-post="{% url 'simulator:reset_chat' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="liquid-pill px-4 py-2.5 rounded-xl text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-semibold transition flex items-center gap-2">
+                            <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            <span>Practicar de Nuevo con este Prospecto</span>
+                        </button>
+                    </form>
+
+                    <form hx-post="{% url 'simulator:next_door' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST">
+                        {% csrf_token %}
+                        <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-semibold text-xs shadow-md shadow-teal-600/30 border border-white/20 transition-all duration-200 transform hover:-translate-y-0.5 flex items-center gap-2">
+                            <span>{% if door.encounter_type == 'STORE' %}Continuar al Siguiente Cliente{% else %}Continuar a la Siguiente Puerta{% endif %}</span>
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        {% elif door.status == 'SALE_CLOSED' %}
             <div class="liquid-card border border-teal-500/30 bg-teal-50/90 dark:bg-teal-950/20 p-6 rounded-3xl text-center space-y-3 max-w-lg mx-auto my-5 shadow-xl shadow-teal-500/10 dark:shadow-teal-950/40 animate-fade-in">
                 <div class="w-12 h-12 rounded-2xl bg-teal-500/20 border border-teal-500/30 text-teal-600 dark:text-teal-300 flex items-center justify-center mx-auto shadow-inner">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -384,7 +511,7 @@
                 </div>
                 <div class="text-rose-700 dark:text-rose-300 font-bold text-base tracking-tight">Contacto Concluido</div>
                 <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    El prospecto concluyó el contacto. En prospección directa el rechazo es parte habitual del proceso. Aplica el aprendizaje en la próxima oportunidad.
+                    El prospecto concluyó el contacto. En venta directa el rechazo es parte natural del proceso. Aplica el aprendizaje en la próxima oportunidad.
                 </p>
                 <form hx-post="{% url 'simulator:next_door' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" class="pt-2">
                     {% csrf_token %}
@@ -398,36 +525,86 @@
     </div>
 
     <!-- Área de Entrada de Mensaje y Sugerencias Rápidas -->
-    <footer class="bg-white/70 dark:bg-slate-950/50 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 p-4 sm:p-5 space-y-3 flex-shrink-0">
+    <!-- Área de Entrada de Mensaje y Sugerencias Rápidas -->
+    <footer class="bg-white/70 dark:bg-slate-950/50 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/5 p-2.5 sm:p-4 space-y-2 sm:space-y-3 flex-shrink-0">
         
-        <!-- Sugerencias Tácticas Recomendadas -->
-        {% if door.status == 'IN_PROGRESS' and door.suggestions %}
-            <div id="suggestions-container" class="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar transition-opacity">
-                <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider flex-shrink-0 flex items-center gap-1.5 pl-1">
-                    <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                    </svg>
-                    {% if not door.messages %}{% if door.encounter_type == 'STORE' %}Ganchos de abordaje recomendados:{% else %}Ganchos de apertura recomendados:{% endif %}{% else %}Ideas opcionales (o responda libremente):{% endif %}
-                </span>
-                {% for sugg in door.suggestions %}
-                    <form hx-post="{% url 'simulator:send_message' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" class="inline flex-shrink-0">
-                        {% csrf_token %}
-                        <input type="hidden" name="message" value="{{ sugg }}">
-                        <button type="submit" class="suggestion-btn liquid-pill px-3.5 py-1.5 rounded-full text-slate-700 dark:text-slate-300 hover:text-teal-700 dark:hover:text-teal-200 text-xs transition text-left truncate max-w-xs sm:max-w-md">
-                            "{{ sugg|truncatechars:65 }}"
-                        </button>
-                    </form>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        <!-- Formulario de Entrada de Texto Libre y Voz -->
+        <!-- Barra de Acciones Tácticas y Pistas -->
         {% if door.status == 'IN_PROGRESS' %}
-            <form id="message-form" hx-post="{% url 'simulator:send_message' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" class="flex items-center gap-2.5 sm:gap-3">
+            <div class="relative flex items-center justify-between gap-3 pb-0.5">
+                <!-- Botón Pistas Tácticas (Popover Desplegable para evitar trampas) -->
+                {% if door.suggestions %}
+                    <div class="relative">
+                        <button type="button" id="btn-toggle-hints" onclick="toggleHintsMenu()" title="Ver u ocultar sugerencias tácticas" class="liquid-pill px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-200 hover:text-teal-700 dark:hover:text-teal-300 text-xs font-semibold transition flex items-center gap-2 border border-teal-500/20 hover:border-teal-500/40">
+                            <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                            <span>Pistas</span>
+                            <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
+                                {{ door.suggestions|length }}
+                            </span>
+                            <svg id="hints-chevron" class="w-3 h-3 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+
+                        <!-- Popover de Sugerencias Oculto por Defecto -->
+                        <div id="hints-popover" class="hidden absolute left-0 bottom-full mb-2 w-80 sm:w-96 max-w-[calc(100vw-2rem)] liquid-card p-3 rounded-2xl shadow-2xl border border-teal-500/30 z-30 space-y-2 backdrop-blur-2xl animate-fade-in">
+                            <div class="flex items-center justify-between border-b border-slate-200/80 dark:border-white/10 pb-2">
+                                <div class="flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                    <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                                        {% if not door.messages %}{% if door.encounter_type == 'STORE' %}Ganchos de abordaje{% else %}Ganchos de apertura{% endif %}{% else %}Pistas tácticas recomendadas{% endif %}
+                                    </span>
+                                </div>
+                                <button type="button" onclick="toggleHintsMenu(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
+                                Haz clic en una sugerencia para enviarla directamente o utilízala como guía para tu respuesta:
+                            </p>
+                            <div class="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pt-1">
+                                {% for sugg in door.suggestions %}
+                                    <form hx-post="{% url 'simulator:send_message' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" onsubmit="toggleHintsMenu(false)">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="message" value="{{ sugg }}">
+                                        <button type="submit" class="w-full text-left p-2.5 rounded-xl hover:bg-teal-500/10 dark:hover:bg-white/5 text-xs text-slate-700 dark:text-slate-200 transition border border-transparent hover:border-teal-500/30 flex items-start gap-2 group">
+                                            <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400 mt-0.5 flex-shrink-0 group-hover:translate-x-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                                            </svg>
+                                            <span class="flex-1 leading-snug">"{{ sugg }}"</span>
+                                        </button>
+                                    </form>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div></div>
+                {% endif %}
+
+                <!-- Botón Concluir y Evaluar -->
+                <form hx-post="{% url 'simulator:finish_chat' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" title="Finalizar interacción actual y generar reporte analítico de desempeño" class="liquid-pill px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition flex items-center gap-1.5">
+                        <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                        </svg>
+                        <span>Concluir y Evaluar</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Formulario de Entrada de Texto Libre y Voz -->
+            <form id="message-form" hx-post="{% url 'simulator:send_message' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" class="flex items-center gap-2 sm:gap-3">
                 {% csrf_token %}
 
                 <!-- Botón de Micrófono de Voz -->
-                <button type="button" id="voice-mic-btn" onclick="VoiceIntercom.toggleListening()" title="Activar micrófono para hablar" class="w-11 h-11 rounded-2xl liquid-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center flex-shrink-0 transition">
+                <button type="button" id="voice-mic-btn" onclick="VoiceIntercom.toggleListening()" title="Activar micrófono para hablar" class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl liquid-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center flex-shrink-0 transition">
                     <!-- Icono Micrófono Inactivo -->
                     <svg id="icon-mic-normal" class="w-5 h-5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
@@ -440,9 +617,9 @@
                 </button>
 
                 <div class="relative flex-1">
-                    <input type="text" id="message-input" name="message" required autocomplete="off" placeholder="{% if not door.messages %}{% if door.encounter_type == 'STORE' %}Aborda al comprador o escribe tu gancho...{% else %}Toca el timbre o escribe tu gancho de apertura...{% endif %}{% else %}Hable por el micrófono o escriba con su propio estilo y palabras...{% endif %}" class="liquid-input w-full rounded-2xl px-4 sm:px-5 py-3 text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <input type="text" id="message-input" name="message" required autocomplete="off" placeholder="{% if not door.messages %}{% if door.encounter_type == 'STORE' %}Aborda al comprador o escribe tu gancho...{% else %}Toca el timbre o escribe tu gancho de apertura...{% endif %}{% else %}Hable por el micrófono o escriba con su propio estilo y palabras...{% endif %}" class="liquid-input w-full rounded-2xl px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed">
                 </div>
-                <button type="submit" id="send-button" class="px-5 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-medium text-sm transition-all duration-200 shadow-md shadow-teal-600/30 border border-white/20 flex items-center gap-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0">
+                <button type="submit" id="send-button" class="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-medium text-xs sm:text-sm transition-all duration-200 shadow-md shadow-teal-600/30 border border-white/20 flex items-center gap-1.5 sm:gap-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0">
                     <span id="send-button-text">Enviar</span>
                     <svg id="send-button-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
@@ -450,12 +627,15 @@
                 </button>
             </form>
         {% else %}
-            <div class="text-center py-2">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 py-1">
+                <span class="text-xs text-slate-500 dark:text-slate-400 font-medium text-center sm:text-left">
+                    Interacción finalizada. Revisa el informe analítico de desempeño superior antes de continuar.
+                </span>
                 <form hx-post="{% url 'simulator:next_door' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST">
                     {% csrf_token %}
-                    <button type="submit" class="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-semibold text-sm transition-all duration-200 shadow-md shadow-teal-600/30 border border-white/20 inline-flex items-center gap-2 transform hover:-translate-y-0.5">
-                        <span>{% if door.encounter_type == 'STORE' %}Abordar Siguiente Comprador{% else %}Tocar Siguiente Puerta{% endif %}</span>
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-semibold text-xs shadow-md shadow-teal-600/30 border border-white/20 inline-flex items-center gap-2 transform hover:-translate-y-0.5 transition">
+                        <span>{% if door.encounter_type == 'STORE' %}Abordar Siguiente Comprador{% else %}Siguiente Puerta{% endif %}</span>
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                         </svg>
                     </button>

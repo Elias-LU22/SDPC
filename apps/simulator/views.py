@@ -110,6 +110,9 @@ def send_message(request):
         if user_message and door_state.get('status') == 'IN_PROGRESS':
             door_state = evaluate_response(user_message, door_state)
             door_state = ensure_door_gender(door_state)
+            if door_state.get('status') in ['SALE_CLOSED', 'APPOINTMENT', 'REJECTED'] and not door_state.get('analytics'):
+                from .chat_engine import compute_chat_analytics
+                door_state['analytics'] = compute_chat_analytics(door_state)
             request.session['door_state'] = door_state
             request.session.modified = True
 
@@ -202,6 +205,7 @@ def reset_chat(request):
         door_state["turn"] = 0
         door_state["doorbell_rung"] = False
         door_state["messages"] = []
+        door_state.pop("analytics", None)
 
         if door_state.get("encounter_type") == "STORE":
             # Restaurar sugerencias de tienda
@@ -224,6 +228,31 @@ def reset_chat(request):
                 'door': door_state,
                 'prospecting_mode': mode
             })
+
+    return redirect('simulator:chat_view')
+
+
+def finish_chat(request):
+    """
+    Concluye voluntariamente la sesión de diálogo actual para generar el informe analítico
+    completo de desempeño comercial y áreas de mejora.
+    """
+    mode = request.session.get('prospecting_mode', 'RANDOM')
+    door_state = request.session.get('door_state')
+    if door_state:
+        door_state = ensure_door_gender(door_state)
+        if door_state.get('status') == 'IN_PROGRESS':
+            door_state['status'] = 'COMPLETED'
+        from .chat_engine import compute_chat_analytics
+        door_state['analytics'] = compute_chat_analytics(door_state)
+        request.session['door_state'] = door_state
+        request.session.modified = True
+
+    if request.headers.get('HX-Request'):
+        return render(request, 'chat_content.html', {
+            'door': door_state,
+            'prospecting_mode': mode
+        })
 
     return redirect('simulator:chat_view')
 
