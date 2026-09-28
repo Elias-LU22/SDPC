@@ -101,45 +101,66 @@ def generate_gemini_response(user_text, door_state):
 
     porch_obs = door_state.get('porch_observation', 'En la puerta de su casa observando al asesor.')
 
+    encounter_type = door_state.get('encounter_type', 'DOOR')
+    location_name = door_state.get('location_name', 'Texas')
+
     history_snippets = []
     for msg in door_state.get('messages', []):
-        sender = f"Residente ({resident_name})" if msg['sender'] == 'prospect' else "Vendedor en puerta"
+        sender = f"Cliente ({resident_name})" if msg['sender'] == 'prospect' else ("Asesor en tienda" if encounter_type == 'STORE' else "Vendedor en puerta")
         history_snippets.append(f"{sender}: {msg['text']}")
 
     conversation_history = "\n".join(history_snippets)
 
+    if encounter_type == 'STORE':
+        lugar_context = (
+            f"LUGAR: Estás en una gran tienda en Texas ({location_name}). "
+            f"Vas entrando a hacer compras o saliendo hacia el estacionamiento con tus compras o víveres. "
+            f"Un asesor comercial de TXU ENERGY (proveedor líder de electricidad en Texas) ubicado en el kiosco oficial "
+            f"en la entrada/salida de la tienda te aborda en frío para ofrecerte planes de energía "
+            f"(Season Pass 50% de descuento en verano/invierno, Free Nights 8PM-6AM, Clear Deal o tarjetas de regalo de tienda)."
+        )
+        observacion_label = f"Lo que el asesor observa de ti en la tienda: {porch_obs}"
+    else:
+        lugar_context = (
+            f"LUGAR: Estás en tu casa en Texas ({location_name}). "
+            f"Un asesor comercial en puerta de TXU ENERGY (proveedor líder de electricidad en Texas) "
+            f"acaba de tocar a tu puerta en frío para ofrecerte planes de energía "
+            f"(Season Pass 50% de descuento en verano/invierno, Free Nights 8PM-6AM, Clear Deal con crédito en factura o tarifa fija protegida)."
+        )
+        observacion_label = f"Lo que el vendedor observa en tu entrada: {porch_obs}"
+
     system_prompt = f"""ESTÁS EN EL ROL DE: {resident_name}, {resident_role}.
-LUGAR: Estás en tu casa en Texas. Un asesor comercial en puerta de TXU ENERGY (proveedor líder de electricidad en Texas) acaba de tocar a tu puerta en frío para ofrecerte planes de energía (Season Pass 50% de descuento en verano/invierno, Free Nights 8PM-6AM, Clear Deal con crédito en factura o tarifa fija protegida).
+{lugar_context}
 
 REGLAS DE IDENTIDAD VITALES:
-1. TÚ ERES EL CLIENTE/RESIDENTE ({resident_name}). TÚ NO ERES EL ASESOR DE TXU.
+1. TÚ ERES EL CLIENTE/COMPRADOR ({resident_name}). TÚ NO ERES EL ASESOR DE TXU.
 2. NUNCA le llames "{resident_name}" al vendedor; ese es TU nombre. El vendedor es un desconocido.
-3. NUNCA OFREZCAS CITAS, NI PROPUESTAS, NI PAQUETES TÚ. Tú solo decides si escuchas, si muestras tu factura de luz, si aceptas el cambio o si cierras la puerta.
+3. NUNCA OFREZCAS CITAS, NI PROPUESTAS, NI PAQUETES TÚ. Tú solo decides si escuchas, si muestras tu factura de luz, si aceptas el cambio o si continúas tu camino.
 4. PERFIL DEL PROSPECTO:
-   - Tipo de residente: {archetype_title}
-   - Contexto del hogar: {archetype_desc}
-   - Lo que el vendedor observa en tu entrada: {porch_obs}
+   - Tipo de perfil: {archetype_title}
+   - Contexto: {archetype_desc}
+   - {observacion_label}
    - Tu Paciencia actual: {patience}%
    - Tu Interés actual: {interest}%
 
 FLEXIBILIDAD, HUMANIDAD Y PERSONALIDAD DEL VENDEDOR:
-- En la prospección real en frío en Texas, cada vendedor tiene su propia personalidad, tono y estilo (humor, empatía genuina, preguntas abiertas, conversación amistosa, técnica consultiva, calidez).
+- En la prospección real en frío en Texas (tanto en puerta como en kiosco de tienda), cada vendedor tiene su propia personalidad, tono y estilo (humor, empatía genuina, preguntas abiertas, conversación amistosa, técnica consultiva, calidez).
 - NO OBLIGUES al vendedor a seguir un guion rígido ni a recitar palabras mágicas obligatorias.
-- Si el vendedor es educado, hace una broma sobre el calor, saluda con calidez, pregunta cómo está el vecino, o hace preguntas abiertas inteligentes sobre su servicio de luz: RECONÓCELO Y RESPONDE CON APERTURA HUMANA.
+- Si el vendedor es educado, hace una broma sobre el calor, saluda con calidez, pregunta cómo está el cliente, o hace preguntas abiertas inteligentes sobre su servicio de luz: RECONÓCELO Y RESPONDE CON APERTURA HUMANA.
 - REGLA CRUCIAL PARA SALUDOS VACÍOS O MONOSÍLABOS:
   * Un simple "hola", "buenas" o saludo aislado de 1 a 3 palabras SIN presentación, SIN decir la empresa (TXU Energy), SIN motivo de visita y SIN gancho comercial NO ES UN GANCHO COMERCIAL.
-  * Si el vendedor dice solo "hola", "buenas tardes" o similar sin decir a qué viene: el residente (especialmente si es HOSTIL, OCUPADO o DESCONFIADO) debe reaccionar extrañado, frío o impaciente ("¿Sí? ¿Quién es y qué se le ofrece?", "¿Qué quiere? Voy de salida", o "¿Quién es usted?").
-  * En un cliente HOSTIL, un simple "hola" le hace perder el tiempo con el calor de Texas, por lo que su paciencia e interés DEBEN DISMINUIR (-10% a -15% de paciencia). NUNCA elogies ni recompenses un monosílabo seco.
-  * El coach comercial ('coach_critique') DEBE corregir al vendedor: señalar que un saludo seco sin identificación corporativa ni motivo de visita genera desconfianza y molestia en puerta fría.
-- El cliente puede cerrar la venta ('SALE_CLOSED') o agendar cita ('APPOINTMENT') con cualquier estilo comercial sólido (consultivo, amistoso, directo, enfocado en ahorro) siempre que haya transmitido confianza y abordado la inquietud del prospecto.
+  * Si el vendedor dice solo "hola", "buenas tardes" o similar sin decir a qué viene: el prospecto (especialmente si es HOSTIL, OCUPADO o DESCONFIADO) debe reaccionar extrañado, frío o impaciente ("¿Sí? ¿Quién es y qué se le ofrece?", "¿Qué quiere? Voy de salida", o "¿Quién es usted?").
+  * En un cliente HOSTIL u OCUPADO, un simple "hola" le hace perder el tiempo o se le derrite el hielo del súper, por lo que su paciencia e interés DEBEN DISMINUIR (-10% a -15% de paciencia). NUNCA elogies ni recompenses un monosílabo seco.
+  * El coach comercial ('coach_critique') DEBE corregir al vendedor: señalar que un saludo seco sin identificación corporativa ni motivo de visita genera desconfianza y molestia.
+- El cliente puede cerrar la venta ('SALE_CLOSED') o agendar cita ('APPOINTMENT') con cualquier estilo comercial sólido siempre que haya transmitido confianza y abordado la inquietud del prospecto.
 - El coach comercial ('coach_critique') debe evaluar con flexibilidad: aplaudir el rapport, la espontaneidad y la empatía, aconsejando mejoras sin forzar a repetir frases prefabricadas.
 5. CERO EMOJIS: Estrictamente prohibido usar emojis en todo el texto.
-6. Tu respuesta ('reply') se pronuncia en voz alta al vendedor (tipo conversación viva en la puerta). Debe ser corta (1 a 2 oraciones), directa, en lenguaje oral natural y fluido, SIN viñetas, SIN asteriscos, SIN caracteres especiales ni abreviaturas que entorpezcan la lectura de voz.
+6. Tu respuesta ('reply') se pronuncia en voz alta al vendedor (tipo conversación viva). Debe ser corta (1 a 2 oraciones), directa, en lenguaje oral natural y fluido, SIN viñetas, SIN asteriscos, SIN caracteres especiales ni abreviaturas que entorpezcan la lectura de voz.
 7. Las 3 sugerencias ('suggestions') deben ser ideas inspiradoras que el asesor de TXU Energy puede decir o adaptar con sus propias palabras.
 
 FORMATO DE SALIDA (ESTRICTAMENTE JSON):
 {{
-  "reply": "Tu respuesta hablada como {resident_name} en la puerta (sin emojis)",
+  "reply": "Tu respuesta hablada como {resident_name} (sin emojis)",
   "patience_change": entero entre -15 y +15,
   "interest_change": entero entre -15 y +25,
   "coach_critique": "Análisis del coach comercial evaluando la técnica del asesor de energía (sin emojis)",
@@ -153,21 +174,34 @@ FORMATO DE SALIDA (ESTRICTAMENTE JSON):
 
     is_opening_turn = len(door_state.get('messages', [])) == 0
     if is_opening_turn:
-        user_prompt = (
-            f"SITUACIÓN EN LA PUERTA:\n"
-            f"El timbre acaba de sonar en tu casa. Abres la puerta y el asesor comercial de TXU Energy te dice de inmediato como gancho de apertura:\n"
-            f"\"{user_text}\"\n\n"
-            f"INSTRUCCIONES PARA ESTE PRIMER TURNO:\n"
-            f"1. Abre la puerta y reacciona a su gancho de apertura según tu arquetipo ({archetype_title}).\n"
-            f"   NOTA VITAL: Si el vendedor dijo únicamente 'hola', 'buenas' o un saludo seco de 1 a 3 palabras sin identificarse ni decir a qué viene, reacciona extrañado o molesto según tu arquetipo, y NO des premios de paciencia ni interés.\n"
-            f"2. En 'coach_critique', evalúa específicamente la efectividad técnica del gancho de apertura inicial (empatía, claridad, gancho de tiempo, impacto en los primeros 15 segundos).\n"
-            f"3. En 'suggestions', sugiere 3 alternativas sólidas para continuar la conversación hacia la factura o el sondeo de necesidades.\n"
-            f"Responde como {resident_name} en formato JSON estricto."
-        )
+        if encounter_type == 'STORE':
+            user_prompt = (
+                f"SITUACIÓN EN LA TIENDA:\n"
+                f"Vas pasando por la entrada o salida de {location_name} y el asesor comercial de TXU Energy en el kiosco te aborda de inmediato diciendo como gancho de apertura:\n"
+                f"\"{user_text}\"\n\n"
+                f"INSTRUCCIONES PARA ESTE PRIMER TURNO:\n"
+                f"1. Reacciona a su gancho de abordaje según tu arquetipo ({archetype_title}) y contexto en la tienda.\n"
+                f"   NOTA VITAL: Si el vendedor dijo únicamente 'hola', 'buenas' o un saludo seco de 1 a 3 palabras sin identificarse ni decir a qué viene, reacciona extrañado o molesto según tu arquetipo, y NO des premios de paciencia ni interés.\n"
+                f"2. En 'coach_critique', evalúa específicamente la efectividad técnica del gancho de abordaje en tienda (impacto en los primeros 10 segundos, no estorbar el paso, beneficio de ahorro o tarjeta de regalo).\n"
+                f"3. En 'suggestions', sugiere 3 alternativas sólidas para continuar la conversación hacia la factura o el sondeo de necesidades.\n"
+                f"Responde como {resident_name} en formato JSON estricto."
+            )
+        else:
+            user_prompt = (
+                f"SITUACIÓN EN LA PUERTA:\n"
+                f"El timbre acaba de sonar en tu casa. Abres la puerta y el asesor comercial de TXU Energy te dice de inmediato como gancho de apertura:\n"
+                f"\"{user_text}\"\n\n"
+                f"INSTRUCCIONES PARA ESTE PRIMER TURNO:\n"
+                f"1. Abre la puerta y reacciona a su gancho de apertura según tu arquetipo ({archetype_title}).\n"
+                f"   NOTA VITAL: Si el vendedor dijo únicamente 'hola', 'buenas' o un saludo seco de 1 a 3 palabras sin identificarse ni decir a qué viene, reacciona extrañado o molesto según tu arquetipo, y NO des premios de paciencia ni interés.\n"
+                f"2. En 'coach_critique', evalúa específicamente la efectividad técnica del gancho de apertura inicial (empatía, claridad, gancho de tiempo, impacto en los primeros 15 segundos).\n"
+                f"3. En 'suggestions', sugiere 3 alternativas sólidas para continuar la conversación hacia la factura o el sondeo de necesidades.\n"
+                f"Responde como {resident_name} en formato JSON estricto."
+            )
     else:
         user_prompt = (
-            f"HISTORIAL EN LA PUERTA:\n{conversation_history}\n\n"
-            f"EL VENDEDOR EN PUERTA DICE:\n\"{user_text}\"\n\n"
+            f"HISTORIAL DE LA CONVERSACIÓN:\n{conversation_history}\n\n"
+            f"EL ASESOR COMERCIAL DICE:\n\"{user_text}\"\n\n"
             f"INSTRUCCIONES PARA ESTE TURNO EN CURSO (NO ES LA APERTURA):\n"
             f"1. La conversación YA ESTÁ EN CURSO. NUNCA saludes de nuevo ('Buenas tardes', 'Hola', etc.) ni preguntes de nuevo quién es o de dónde viene. Responde con naturalidad a lo que acaba de decir el vendedor basándote en el historial.\n"
             f"2. En 'coach_critique', evalúa la técnica del asesor en esta etapa intermedia o de cierre (manejo de objeción, profundización, propuesta de valor, conexión empática o cierre), NUNCA lo trates como gancho de apertura.\n"

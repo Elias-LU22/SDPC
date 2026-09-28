@@ -23,7 +23,11 @@ const VoiceIntercom = (function() {
         'Andrea Salazar',
         'Beatriz Luna',
         'Elena Ramos',
-        'Valeria Ríos'
+        'Valeria Ríos',
+        'Marcela Beltrán',
+        'Laura Cárdenas',
+        'Gloria Hinojosa',
+        'Verónica Trejo'
     ];
 
     // Inicializar AudioContext de forma perezosa tras el primer gesto del usuario
@@ -101,6 +105,47 @@ const VoiceIntercom = (function() {
             console.warn('[VoiceIntercom] Web Audio no disponible:', e);
         }
     }
+
+    // Efecto de audio para abordaje en tienda retail (Web Audio API: Fa5 698.46 Hz + La5 880 Hz)
+    function playStoreChime() {
+        try {
+            const ctx = getAudioContext();
+            if (!ctx) return;
+
+            const now = ctx.currentTime;
+            
+            // Primer tono (Fa5 - 698.46 Hz)
+            const osc1 = ctx.createOscillator();
+            const gain1 = ctx.createGain();
+            osc1.type = 'triangle';
+            osc1.frequency.setValueAtTime(698.46, now);
+            gain1.gain.setValueAtTime(0, now);
+            gain1.gain.linearRampToValueAtTime(0.24, now + 0.03);
+            gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.55);
+            osc1.connect(gain1);
+            gain1.connect(ctx.destination);
+            osc1.start(now);
+            osc1.stop(now + 0.55);
+
+            // Segundo tono (La5 - 880 Hz)
+            const osc2 = ctx.createOscillator();
+            const gain2 = ctx.createGain();
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(880.0, now + 0.22);
+            gain2.gain.setValueAtTime(0, now + 0.22);
+            gain2.gain.linearRampToValueAtTime(0.28, now + 0.26);
+            gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.95);
+            osc2.connect(gain2);
+            gain2.connect(ctx.destination);
+            osc2.start(now + 0.22);
+            osc2.stop(now + 0.95);
+
+            updateStatusBadge('Abordando comprador en tienda...', 'teal');
+        } catch (e) {
+            console.warn('[VoiceIntercom] Web Audio tienda no disponible:', e);
+        }
+    }
+
 
     // Cargar voces del sintetizador del navegador
     function loadVoices() {
@@ -687,8 +732,24 @@ const VoiceIntercom = (function() {
         }, 900);
     }
 
+    // Iniciar abordaje a un comprador en tienda comercial
+    function approachAndStart() {
+        playStoreChime();
+        currentGender = getResidentGender();
+        updateStatusBadge('Abordaje iniciado en tienda...', 'amber');
+
+        // Tras el tono de tienda, activar el micrófono para que el vendedor hable primero
+        setTimeout(() => {
+            if (!isListening) {
+                startListening();
+            }
+            updateStatusBadge('Micrófono activo: Presenta tu gancho de abordaje', 'emerald');
+        }, 750);
+    }
+
     return {
         playDoorbell,
+        playStoreChime,
         speak,
         startListening,
         stopListening,
@@ -697,7 +758,9 @@ const VoiceIntercom = (function() {
         toggleMute,
         onChatContentSwapped,
         ringAndStart,
+        approachAndStart,
         selectVoice,
         getResidentGender
     };
 })();
+

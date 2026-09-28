@@ -185,56 +185,247 @@ ARCHETYPE_DETAILS = {
     }
 }
 
+RETAIL_LOCATIONS = [
+    "H-E-B Frisco - Puerta de Salida",
+    "Walmart Supercenter Dallas - Salida de Cajas",
+    "Fiesta Mart Fort Worth - Entrada Principal",
+    "Home Depot Arlington - Entrada Principal",
+    "Kroger Plano - Pasillo de Salida",
+    "H-E-B Houston - Puerta Principal",
+    "Walmart Supercenter Garland - Salida de Cajas",
+    "Costco Wholesale Irving - Entrada Principal",
+    "Walmart Supercenter Dallas - Entrada de Abarrotes"
+]
 
-def create_new_door(exclude_name=None, exclude_archetype=None, visited_names=None, current_door_num=None):
+RETAIL_SHOPPERS = [
+    {
+        "name": "Guillermo Lozano",
+        "role": "Comprador con prisa / Carrito con hielo en H-E-B",
+        "archetype": "BUSY",
+        "gender": "M",
+        "location": "H-E-B Frisco - Puerta de Salida",
+        "store_observation": "Lleva un carrito lleno de víveres, dos bolsas de hielo derritiéndose y las llaves de la camioneta en la mano.",
+        "opening_hooks": [
+            "¡Buenas tardes caballero! Solo 10 segundos antes de subir el mandado al auto: ¿su recibo de luz subió con este calor?",
+            "Buenas tardes vecino, no le detengo el paso: TXU le da 50% de descuento en luz en verano para compensar el gasto del súper.",
+            "¡Hola! Rápido mientras camina al coche: ¿cuánto pagó de electricidad el mes pasado con el aire al máximo?"
+        ]
+    },
+    {
+        "name": "Marcela Beltrán",
+        "role": "Madre de familia / Saliendo de compras en Walmart",
+        "archetype": "BARGAIN_HUNTER",
+        "gender": "F",
+        "location": "Walmart Supercenter Dallas - Salida de Cajas",
+        "store_observation": "Revisando el ticket de compra largo en la mano y atenta a las promociones de la entrada.",
+        "opening_hooks": [
+            "¡Buenas tardes! Estamos comparando centavos por kilovatio directo de la etiqueta EFL para que ahorre en la luz.",
+            "Hola vecina, si su recibo supera 1,000 kWh en verano, TXU le da $30 de crédito automático en factura cada mes.",
+            "Buenas tardes, ¿a cuántos centavos le están cobrando el kWh actualmente en su compañía de luz?"
+        ]
+    },
+    {
+        "name": "Arturo Cavazos",
+        "role": "Contratista independiente / Home Depot",
+        "archetype": "SKEPTICAL",
+        "gender": "M",
+        "location": "Home Depot Arlington - Entrada Principal",
+        "store_observation": "Caminando a paso firme hacia la entrada de herramientas con gorra de trabajo; esquiva la mirada hacia el kiosco.",
+        "opening_hooks": [
+            "Buenas tardes caballero, somos módulo oficial certificado de TXU Energy dentro de la tienda, no pedimos firmas ni cuentas hoy.",
+            "Hola, buenas tardes. Con total transparencia en pantalla le comparamos si su tarifa de luz actual está protegida contra apagones.",
+            "Buenas tardes, disculpe. Solo una consulta rápida para clientes de Home Depot: ¿su tarifa de luz comercial o residencial es fija o variable?"
+        ]
+    },
+    {
+        "name": "Laura Cárdenas",
+        "role": "Compradora en Fiesta Mart / Busca tarjeta de regalo",
+        "archetype": "IDEAL_LEAD",
+        "gender": "F",
+        "location": "Fiesta Mart Fort Worth - Entrada Principal",
+        "store_observation": "Se detiene un segundo con curiosidad frente al letrero de 'Gana una Gift Card de $50 con TXU Energy'.",
+        "opening_hooks": [
+            "¡Buenas tardes vecina! Si revisamos su tarifa de luz de verano en 2 minutos se lleva una tarjeta de regalo de $50 de la tienda.",
+            "Hola, buenas tardes. ¿Cuánto le cobraron de pura luz el mes pasado con el aire acondicionado al tope?",
+            "Buenas tardes vecina, en el kiosco oficial de TXU estamos activando 50% de descuento en luz para los clientes de Fiesta Mart."
+        ]
+    },
+    {
+        "name": "Samuel Elizondo",
+        "role": "Profesionista / Lleva app de su proveedor en el celular",
+        "archetype": "TECH_SAVVY",
+        "gender": "M",
+        "location": "Kroger Plano - Pasillo de Salida",
+        "store_observation": "Esperando a su acompañante junto a la salida mientras revisa notificaciones en su smartphone.",
+        "opening_hooks": [
+            "Buenas tardes caballero. Noté que usa su smartphone, ¿en la app de su luz tiene monitoreo de consumo en tiempo real?",
+            "Hola, buenas tardes. Para usuarios con tecnología en casa o auto eléctrico, TXU tiene el plan Free Nights con luz gratis de 8 PM a 6 AM.",
+            "Buenas tardes. ¿Ya conoce la garantía de tarifa protegida de TXU Energy para blindar su consumo inteligente este verano?"
+        ]
+    },
+    {
+        "name": "Gloria Hinojosa",
+        "role": "Jubilada en H-E-B / Fiel a Reliant Energy",
+        "archetype": "LOYALIST",
+        "gender": "F",
+        "location": "H-E-B Houston - Puerta Principal",
+        "store_observation": "Caminando despacio con su bolsa de compras reutilizable; sonríe amablemente pero sigue de largo.",
+        "opening_hooks": [
+            "Buenas tardes señora, qué gusto verla en H-E-B. Representamos a TXU Energy informando que Oncor mantiene los mismos postes pero con tarifas más económicas.",
+            "Hola, buenas tardes. Muchos clientes que llevaban años con Reliant se sorprendieron al ver cuánto podían ahorrar cambiando a TXU.",
+            "Buenas tardes. Respetamos mucho su lealtad con su proveedor actual; solo le mostramos en 1 minuto si su precio está actualizado."
+        ]
+    },
+    {
+        "name": "Rodrigo Paredes",
+        "role": "Joven universitario / Acompaña a sus padres",
+        "archetype": "NON_DECISION_MAKER",
+        "gender": "M",
+        "location": "Walmart Supercenter Garland - Salida de Cajas",
+        "store_observation": "Empujando el carrito con refrescos mientras sus familiares pagan en la caja de autoservicio.",
+        "opening_hooks": [
+            "¡Buenas tardes! Vengo de TXU Energy con información importante sobre el subsidio de verano en la electricidad para el hogar.",
+            "Hola, buenas tardes. ¿Quién en su casa se encarga de revisar los recibos de la luz para entregarle un comparativo breve de ahorro?",
+            "Buenas tardes. Estamos entregando cupones de descuento para el recibo de luz familiar, ¿quién suele administrar la cuenta en casa?"
+        ]
+    },
+    {
+        "name": "Verónica Trejo",
+        "role": "Compradora evasiva / Lleva prisa para subir al auto",
+        "archetype": "POLITE_EVASIVE",
+        "gender": "F",
+        "location": "Costco Wholesale Irving - Entrada Principal",
+        "store_observation": "Lleva gafas de sol puestas y paquetes en el carrito; saluda cordialmente con una sonrisa pero no frena el paso.",
+        "opening_hooks": [
+            "Buenas tardes vecina, disculpe que la interrumpa un momento. Solo una consulta breve antes de que guarde sus compras en el auto.",
+            "Hola vecina, qué gusto saludarla. Rápido, en 15 segundos: ¿su factura de luz suele superar los $200 dólares en los meses de calor?",
+            "Buenas tardes, tenemos un folleto con cupón de ahorro de TXU Energy para socios de la tienda, ¿gusta que se lo entregue con una comparativa?"
+        ]
+    },
+    {
+        "name": "Ernesto Macías",
+        "role": "Comprador irritable / Molesto por promotores de pasillo",
+        "archetype": "HOSTILE",
+        "gender": "M",
+        "location": "Walmart Supercenter Dallas - Entrada de Abarrotes",
+        "store_observation": "Cruza la salida resoplando por el calor que entra por las puertas automáticas; frunce el ceño al notar el módulo comercial.",
+        "opening_hooks": [
+            "Buenas tardes señor, una disculpa sincera por la interrupción. Solo un saludo respetuoso del módulo de TXU Energy en la tienda.",
+            "Hola, buenas tardes. No lo detengo para nada señor, solo desearle buen provecho y excelente camino a casa.",
+            "Buenas tardes caballero, con permiso. Con este calorón afuera solo pasamos a recordarles que TXU mantiene las tarifas protegidas."
+        ]
+    }
+]
+
+
+def create_new_door(mode="DOOR", exclude_name=None, exclude_archetype=None, visited_names=None, current_door_num=None):
     """
-    Genera un nuevo prospecto garantizando variedad en residentes y arquetipos,
-    evitando repetir el mismo prospecto o el mismo tema inmediatamente.
-    Inicia en la puerta sin mensajes previos, requiriendo tocar el timbre.
+    Genera un nuevo prospecto según la modalidad activa (Puerta a Puerta, Puerta de Tienda o Aleatorio).
+    Garantiza variedad en residentes/compradores y arquetipos, evitando repetir el prospecto o tema inmediatamente.
     """
     if visited_names is None:
         visited_names = []
 
-    # 1. Filtrar prospectos no visitados en la rotación actual
-    unvisited = [r for r in RESIDENTS if r["name"] not in visited_names and r["name"] != exclude_name]
+    # Determinar si el encuentro actual será en puerta residencial o en tienda
+    active_mode = (mode or "RANDOM").upper()
+    if active_mode == "DOOR":
+        encounter_type = "DOOR"
+    elif active_mode == "STORE":
+        encounter_type = "STORE"
+    else:  # RANDOM
+        encounter_type = random.choice(["DOOR", "STORE"])
 
-    # Si ya se recorrieron todos los residentes, reiniciar ciclo excluyendo únicamente el actual
-    if not unvisited:
-        unvisited = [r for r in RESIDENTS if r["name"] != exclude_name]
+    if encounter_type == "STORE":
+        # Selección de comprador en tienda
+        unvisited = [s for s in RETAIL_SHOPPERS if s["name"] not in visited_names and s["name"] != exclude_name]
         if not unvisited:
-            unvisited = list(RESIDENTS)
+            unvisited = [s for s in RETAIL_SHOPPERS if s["name"] != exclude_name]
+            if not unvisited:
+                unvisited = list(RETAIL_SHOPPERS)
 
-    # 2. Priorizar un arquetipo diferente al de la puerta anterior
-    different_archetype = [r for r in unvisited if r["archetype"] != exclude_archetype]
-    candidates = different_archetype if different_archetype else unvisited
+        diff_arch = [s for s in unvisited if s["archetype"] != exclude_archetype]
+        candidates = diff_arch if diff_arch else unvisited
+        shopper = random.choice(candidates)
+        arch_key = shopper["archetype"]
+        arch_data = ARCHETYPE_DETAILS[arch_key]
 
-    resident = random.choice(candidates)
-    archetype_key = resident["archetype"]
-    archetype_data = ARCHETYPE_DETAILS[archetype_key]
+        if current_door_num and isinstance(current_door_num, int) and 100 <= current_door_num <= 890:
+            door_num = current_door_num + random.choice([2, 4, 6])
+        else:
+            door_num = random.choice([102, 104, 106, 108, 110, 114, 116])
 
-    # Número de puerta realista y secuencial en la misma calle residencial
-    if current_door_num and isinstance(current_door_num, int) and 100 <= current_door_num <= 890:
-        door_num = current_door_num + random.choice([2, 4, 6])
+        return {
+            "encounter_type": "STORE",
+            "prospecting_mode": active_mode,
+            "location_name": shopper["location"],
+            "location_detail": "Kiosco Comercial / Entrada de Tienda",
+            "door_number": door_num,
+            "resident_name": shopper["name"],
+            "resident_role": shopper["role"],
+            "resident_gender": shopper.get("gender", "M"),
+            "archetype": arch_key,
+            "archetype_title": arch_data["title"],
+            "archetype_description": arch_data["description"],
+            "porch_observation": shopper["store_observation"],
+            "context_observation": shopper["store_observation"],
+            "trigger_action_label": "Abordar Comprador",
+            "trigger_sound": "store_chime",
+            "patience": arch_data["initial_patience"],
+            "interest": arch_data["initial_interest"],
+            "status": "IN_PROGRESS",
+            "turn": 0,
+            "doorbell_rung": False,  # True cuando se aborda al comprador
+            "messages": [],
+            "suggestions": shopper.get("opening_hooks", arch_data.get("opening_hooks", arch_data["suggestions"])),
+        }
     else:
-        door_num = random.choice([102, 104, 106, 108, 110, 114, 116])
+        # Selección de residente puerta a puerta
+        unvisited = [r for r in RESIDENTS if r["name"] not in visited_names and r["name"] != exclude_name]
+        if not unvisited:
+            unvisited = [r for r in RESIDENTS if r["name"] != exclude_name]
+            if not unvisited:
+                unvisited = list(RESIDENTS)
 
-    return {
-        "door_number": door_num,
-        "resident_name": resident["name"],
-        "resident_role": resident["role"],
-        "resident_gender": resident.get("gender", "M"),
-        "archetype": archetype_key,
-        "archetype_title": archetype_data["title"],
-        "archetype_description": archetype_data["description"],
-        "porch_observation": archetype_data.get("porch_observation", "En su puerta residencial observando al asesor."),
-        "patience": archetype_data["initial_patience"],
-        "interest": archetype_data["initial_interest"],
-        "status": "IN_PROGRESS",  # IN_PROGRESS, SALE_CLOSED, APPOINTMENT, REJECTED
-        "turn": 0,
-        "doorbell_rung": False,
-        "messages": [],
-        "suggestions": archetype_data.get("opening_hooks", archetype_data["suggestions"]),
-    }
+        diff_arch = [r for r in unvisited if r["archetype"] != exclude_archetype]
+        candidates = diff_arch if diff_arch else unvisited
+        resident = random.choice(candidates)
+        arch_key = resident["archetype"]
+        arch_data = ARCHETYPE_DETAILS[arch_key]
+
+        if current_door_num and isinstance(current_door_num, int) and 100 <= current_door_num <= 890:
+            door_num = current_door_num + random.choice([2, 4, 6])
+        else:
+            door_num = random.choice([102, 104, 106, 108, 110, 114, 116])
+
+        return {
+            "encounter_type": "DOOR",
+            "prospecting_mode": active_mode,
+            "location_name": f"Puerta #{door_num}",
+            "location_detail": "Residencia en Texas",
+            "door_number": door_num,
+            "resident_name": resident["name"],
+            "resident_role": resident["role"],
+            "resident_gender": resident.get("gender", "M"),
+            "archetype": arch_key,
+            "archetype_title": arch_data["title"],
+            "archetype_description": arch_data["description"],
+            "porch_observation": arch_data.get("porch_observation", "En su puerta residencial observando al asesor."),
+            "context_observation": arch_data.get("porch_observation", "En su puerta residencial observando al asesor."),
+            "trigger_action_label": "Tocar Timbre",
+            "trigger_sound": "doorbell",
+            "patience": arch_data["initial_patience"],
+            "interest": arch_data["initial_interest"],
+            "status": "IN_PROGRESS",
+            "turn": 0,
+            "doorbell_rung": False,
+            "messages": [],
+            "suggestions": arch_data.get("opening_hooks", arch_data["suggestions"]),
+        }
+
+
+# Alias semántico
+create_new_encounter = create_new_door
+
 
 
 def evaluate_response_local(user_text, door_state):
@@ -266,7 +457,11 @@ def evaluate_response_local(user_text, door_state):
     has_decision_maker_probe = bool(re.search(r'(a qu[eé] hora llega|a qu[eé] hora est[aá]|titular|espos|pap[aá]|mam[aá]|qui[eé]n se encarga|regres|vuelvo|tarde|noche)', text))
     has_attack_competitor = bool(re.search(r'(no sirve|p[eé]sim|obsolet|mentiros|chatarra|porquer[ií]a|robo|abus|se aprovechan)', text))
     has_slamming_assurance = bool(re.search(r'(gafete|oficial|100 a[nñ]os|proteger|esi id|no le pido firmas|no le pido su recibo)', text))
+    has_store_gift_card = bool(re.search(r'(tarjeta|gift card|tarjeta de regalo|\$50|\$25|regalo|premio|ruleta)', text))
+    has_store_hurry_empathy = bool(re.search(r'(mandado|carrito|hielo|bolsas|s[uú]per|tienda|no le detengo|mientras camina|al coche|al auto|al estacionamiento|h-e-b|walmart|fiesta|kroger|home depot|costco)', text))
+    has_kiosk_trust = bool(re.search(r'(m[oó]dulo|kiosco|kiosko|oficial|aqu[ií] en la tienda|en pantalla|stand)', text))
     is_too_long = len(text) > 300
+    is_store_encounter = door_state.get("encounter_type") == "STORE"
 
     # Detección de rapport humano, empatía, humor y preguntas abiertas (Flexibilidad conversacional con sustancia)
     has_rapport_greeting = bool(re.search(r'(hola|buen[oa]s\s*(d[ií]as|tardes|noches)|qu[eé]\s*tal|c[oó]mo\s*(est[aá]|le\s*va|anda)|mucho\s*gusto|vecin[oa]|disculpe|calor[oó]n|qu[eé]\s*calor|tremendo\s*calor|vengo\s*pasando)', text))
@@ -274,9 +469,9 @@ def evaluate_response_local(user_text, door_state):
     has_empathy_reassurance = bool(re.search(r'(no\s*le\s*quito|no\s*se\s*preocupe|lo\s*entiendo|le\s*entiendo|tiene\s*raz[oó]n|a\s*todos\s*nos|s[eé]\s*que|tranquil[oa]|para\s*servirle|con\s*gusto|sin\s*compromiso|jaja|entiendo\s*perfectamente)', text))
 
     words = [w for w in re.split(r'\s+', text) if w]
-    # Detección de saludos secos o monosílabos sin gancho comercial (ej. "hola", "buenas", "buenas tardes", "hey", "saludos", "disculpe")
-    is_bare_greeting = len(words) <= 3 and bool(re.search(r'^(hola|buen[oa]s(\s*(d[ií]as|tardes|noches))?|buen\s*d[ií]a|qu[eé]\s*tal|buenas|hey|saludos|disculpe)(\s*vecin[oa])?[\.\!\?]*$', text))
-    is_meaningless_opening = is_opening_turn and len(words) <= 2 and not (has_pain_probe or has_season_pass or has_time_hook or has_open_question or has_close_attempt or has_cents_kwh or has_neighbor_social_proof)
+    # Detección de saludos secos o monosílabos sin gancho comercial (ej. "hola", "buenas", "buenas tardes", "hola buenas tardes", "hey", "saludos", "disculpe")
+    is_bare_greeting = len(words) <= 4 and bool(re.search(r'^(hola\s+)?(hola|buen[oa]s(\s*(d[ií]as|tardes|noches))?|buen\s*d[ií]a|qu[eé]\s*tal|buenas|hey|saludos|disculpe)(\s*(vecin[oa]|se[ñn]or[a]?|caballero|joven))?[\.\!\?]*$', text))
+    is_meaningless_opening = is_opening_turn and len(words) <= 3 and not (has_pain_probe or has_season_pass or has_time_hook or has_open_question or has_close_attempt or has_cents_kwh or has_neighbor_social_proof or has_store_gift_card or has_store_hurry_empathy or has_kiosk_trust)
 
     has_natural_personality = (has_rapport_greeting or has_open_question or has_empathy_reassurance) and not (is_bare_greeting or is_meaningless_opening)
 
@@ -291,89 +486,174 @@ def evaluate_response_local(user_text, door_state):
     # ==========================
     if is_bare_greeting or is_meaningless_opening:
         if is_opening_turn:
-            BARE_OPENING_RESPONSES = {
-                "HOSTILE": {
-                    "patience": -15, "interest": -5,
-                    "reply": "¿Sí? ¿Quién es usted y qué se le ofrece? No me haga salir a la puerta con este calorón para decirme solo 'hola'.",
-                    "coach": "Un simple saludo no es un gancho comercial. En prospección en frío, dejar vacíos de información ante un prospecto hostil dispara su impaciencia. Debes presentarte con tu nombre, la empresa (TXU Energy) y un marco de tiempo de inmediato.",
-                    "suggestions": [
-                        "Una disculpa por la interrupción: soy asesor oficial de TXU Energy, solo 15 segundos para no quitarle tiempo con este calor.",
-                        "Buenas tardes, disculpe la molestia. Vengo de TXU Energy con los vecinos para revisar el impacto del calor en el recibo de luz."
-                    ]
-                },
-                "BUSY": {
-                    "patience": -10, "interest": 0,
-                    "reply": "Buenas tardes... dígame rápido joven que voy de salida con el tiempo medido. ¿Qué se le ofrece?",
-                    "coach": "Falta de gancho de tiempo y motivo. Un cliente con prisa necesita saber en los primeros 5 segundos quién eres y qué beneficio concreto le ofreces.",
-                    "suggestions": [
-                        "Solo 15 segundos porque veo que va saliendo: TXU da 50% de descuento en luz en verano. ¿A qué hora le encuentro para hacer el cálculo?",
-                        "Una disculpa, voy directo al grano en 10 segundos: represento a TXU Energy para proteger su tarifa de verano."
-                    ]
-                },
-                "SKEPTICAL": {
-                    "patience": -5, "interest": -5,
-                    "reply": "¿Sí? ¿Quién es usted y de parte de quién viene? No acostumbro abrirle a desconocidos.",
-                    "coach": "Alerta de desconfianza. Sin identificación corporativa ni gafete a la vista, el cliente escéptico asume que se trata de un desconocido sospechoso.",
-                    "suggestions": [
-                        "Buenas tardes señor, asesor oficial de TXU Energy con gafete verificado. No le pido firmas ni datos hoy, solo informarle de la tarifa protegida.",
-                        "Buenas tardes, represento a TXU Energy en esta cuadra. ¿Cómo le ha ido con el recibo en estos meses de calor?"
-                    ]
-                },
-                "POLITE_EVASIVE": {
-                    "patience": 0, "interest": 0,
-                    "reply": "Buenas tardes... dígame, ¿en qué le puedo ayudar? Si viene a vender algo, ¿tiene algún folleto que me deje para revisarlo luego?",
-                    "coach": "Saludo cortés pero inerte. Sin una presentación clara ni pregunta de diagnóstico sobre su factura, el prospecto evasivo toma el control para despedirte con el folleto.",
-                    "suggestions": [
-                        "Con gusto vecina, soy de TXU Energy. Solo una pregunta rápida antes de dejárselo: ¿su recibo suele subir mucho en julio?",
-                        "Buenas tardes Doña Elena, vengo de TXU Energy para revisar si califica al 50% de descuento en verano con Season Pass."
-                    ]
-                },
-                "IDEAL_LEAD": {
-                    "patience": 0, "interest": +5,
-                    "reply": "Buenas tardes. Dígame, ¿de qué empresa viene o qué se le ofrece?",
-                    "coach": "El prospecto es accesible pero necesitas presentarte y abrir con el motivo de visita para despertar su interés en el ahorro.",
-                    "suggestions": [
-                        "Buenas tardes, represento a TXU Energy. Vengo porque con este calor los recibos de luz se están disparando en la colonia.",
-                        "Soy asesor de TXU Energy, ¿su última factura de luz vino muy alta por el aire acondicionado?"
-                    ]
-                },
-                "BARGAIN_HUNTER": {
-                    "patience": 0, "interest": 0,
-                    "reply": "Buenas tardes. ¿De qué compañía es y qué producto trae?",
-                    "coach": "Presenta tu empresa y el beneficio financiero de entrada. El cliente analítico necesita saber rápidamente de qué se trata.",
-                    "suggestions": [
-                        "Buenas tardes, soy asesor de TXU Energy. Estamos ofreciendo planes con tarifa fija protegida desde 12.8 centavos por kWh.",
-                        "De TXU Energy, con 50% de descuento en luz en verano. ¿Cuánto paga actualmente por kWh?"
-                    ]
-                },
-                "NON_DECISION_MAKER": {
-                    "patience": 0, "interest": 0,
-                    "reply": "Buenas tardes... dígame, ¿qué necesita?",
-                    "coach": "Identifícate con cordialidad para no intimidar a quien no toma las decisiones en el hogar.",
-                    "suggestions": [
-                        "Buenas tardes, vengo de TXU Energy con información del ahorro de verano para los vecinos de la cuadra.",
-                        "Buenas tardes, solo una pregunta rápida: ¿a qué hora suele estar el titular de la cuenta de luz para dejarle un comparativo?"
-                    ]
-                },
-                "LOYALIST": {
-                    "patience": 0, "interest": 0,
-                    "reply": "Buenas tardes joven. ¿Qué se le ofrece por aquí?",
-                    "coach": "Presenta a TXU Energy con respeto para no activar de inmediato su barrera de fidelidad hacia su proveedor actual.",
-                    "suggestions": [
-                        "Buenas tardes señor, soy asesor de TXU Energy. Vengo informando a los vecinos sobre cómo proteger la tarifa con Oncor en verano.",
-                        "Buenas tardes vecino, disculpe la molestia. ¿Cómo le ha ido con el servicio de electricidad en esta temporada?"
-                    ]
-                },
-                "TECH_SAVVY": {
-                    "patience": 0, "interest": 0,
-                    "reply": "Buenas tardes. ¿Quién es y qué servicio promueve?",
-                    "coach": "Presentación incompleta. Un perfil técnico valora la precisión y directriz inmediata.",
-                    "suggestions": [
-                        "Buenas tardes, soy de TXU Energy. Traemos el plan Free Nights con electricidad 100% gratuita de noche.",
-                        "Buenas tardes, asesor oficial de TXU Energy con planes para hogares inteligentes y vehículos eléctricos."
-                    ]
-                },
-            }
+            if is_store_encounter:
+                BARE_OPENING_RESPONSES = {
+                    "HOSTILE": {
+                        "patience": -15, "interest": -5,
+                        "reply": "¿Sí? ¿Qué se le ofrece? No me estorbe el paso con el carrito para decirme solo 'hola', que se me derrite el mandado.",
+                        "coach": "Un simple saludo no es un gancho comercial. En tienda o pasillo comercial, detener a un comprador solo para decir 'hola' sin tarjeta de regalo, gancho de tiempo ni identificación genera molestia instantánea. Debes presentarte con tu nombre, la empresa (TXU Energy) y un marco de tiempo de inmediato.",
+                        "suggestions": [
+                            "Una disculpa por la interrupción: soy asesor oficial de TXU Energy, solo 15 segundos para no quitarle tiempo con este calor.",
+                            "Buenas tardes, disculpe la molestia. Vengo de TXU Energy para revisar el impacto del calor en el recibo de luz."
+                        ]
+                    },
+                    "BUSY": {
+                        "patience": -10, "interest": 0,
+                        "reply": "Buenas tardes... dígame rápido joven que se me derrite el hielo en el carrito. ¿Qué promociona?",
+                        "coach": "Falta de gancho de tiempo y motivo en retail. Un comprador en tienda con prisa necesita saber en los primeros 5 segundos quién eres y qué beneficio concreto le ofreces.",
+                        "suggestions": [
+                            "Solo 10 segundos antes de subir el mandado: TXU da 50% de descuento en luz en verano. ¿Cuánto pagó el mes pasado?",
+                            "Una disculpa caballero, no le detengo el paso: TXU da $30 de crédito en factura cada mes."
+                        ]
+                    },
+                    "SKEPTICAL": {
+                        "patience": -5, "interest": -5,
+                        "reply": "¿Sí? ¿De qué compañía es? No acostumbro detenerme con promotores en las salidas de la tienda.",
+                        "coach": "Alerta de desconfianza. Sin identificación corporativa ni gafete a la vista, el cliente escéptico asume que se trata de un desconocido sospechoso.",
+                        "suggestions": [
+                            "Buenas tardes caballero, módulo oficial de TXU Energy dentro de la tienda. No pedimos firmas hoy, solo informarle de la tarifa protegida.",
+                            "Buenas tardes, represento a TXU Energy aquí en la tienda. ¿Cómo le ha ido con el recibo en estos meses de calor?"
+                        ]
+                    },
+                    "POLITE_EVASIVE": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes... con permiso joven que voy al auto. Si tiene algún folleto démelo y luego lo reviso.",
+                        "coach": "Saludo cortés pero inerte. Sin una presentación clara ni pregunta de diagnóstico sobre su factura, el prospecto evasivo toma el control para despedirte con el folleto.",
+                        "suggestions": [
+                            "Con gusto vecina, soy de TXU Energy. Solo una pregunta rápida antes de guardarlo: ¿su recibo suele subir mucho en julio?",
+                            "Buenas tardes, vengo del módulo de TXU Energy para revisar si califica al 50% de descuento en verano con Season Pass."
+                        ]
+                    },
+                    "IDEAL_LEAD": {
+                        "patience": 0, "interest": +5,
+                        "reply": "Buenas tardes. Dígame, ¿es el módulo de la luz o qué promocionan aquí?",
+                        "coach": "El prospecto es accesible pero necesitas presentarte y abrir con el motivo de visita para despertar su interés en el ahorro.",
+                        "suggestions": [
+                            "Buenas tardes, represento a TXU Energy. Estamos regalando tarjetas de $50 y 50% de descuento en luz este verano.",
+                            "Soy asesor de TXU Energy, ¿su última factura de luz vino muy alta por el aire acondicionado?"
+                        ]
+                    },
+                    "BARGAIN_HUNTER": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes. ¿Qué plan traen y cuánto cobran por kWh?",
+                        "coach": "Presenta tu empresa y el beneficio financiero de entrada. El cliente analítico necesita saber rápidamente de qué se trata.",
+                        "suggestions": [
+                            "Buenas tardes, soy asesor de TXU Energy. Tenemos tarifas fijas protegidas desde 12.8 centavos por kWh con $30 de crédito.",
+                            "De TXU Energy, con 50% de descuento en luz en verano. ¿Cuánto paga actualmente por kWh?"
+                        ]
+                    },
+                    "NON_DECISION_MAKER": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes... dígame, ¿qué necesita?",
+                        "coach": "Identifícate con cordialidad para no intimidar a quien no toma las decisiones en el hogar.",
+                        "suggestions": [
+                            "Buenas tardes, vengo de TXU Energy con cupones de ahorro de verano para los clientes de la tienda.",
+                            "Buenas tardes, solo una pregunta rápida: ¿quién en casa se encarga del recibo de luz para entregarle un comparativo?"
+                        ]
+                    },
+                    "LOYALIST": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes joven. Ya tengo compañía de luz desde hace años y no me interesa cambiarme.",
+                        "coach": "Presenta a TXU Energy con respeto para no activar de inmediato su barrera de fidelidad hacia su proveedor actual.",
+                        "suggestions": [
+                            "Buenas tardes, qué gusto saludarle. Oncor mantiene los mismos postes pero con TXU la tarifa de verano baja 50%.",
+                            "Buenas tardes vecina, disculpe la molestia. ¿Cómo le ha ido con el servicio de electricidad en esta temporada?"
+                        ]
+                    },
+                    "TECH_SAVVY": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes. ¿Quiénes son y qué servicio ofrecen en este módulo?",
+                        "coach": "Presentación incompleta. Un perfil técnico valora la precisión y directriz inmediata.",
+                        "suggestions": [
+                            "Buenas tardes, soy de TXU Energy. Traemos el plan Free Nights con electricidad 100% gratuita de 8 PM a 6 AM.",
+                            "Buenas tardes, asesor oficial de TXU Energy con planes para hogares inteligentes y vehículos eléctricos."
+                        ]
+                    },
+                }
+            else:
+                BARE_OPENING_RESPONSES = {
+                    "HOSTILE": {
+                        "patience": -15, "interest": -5,
+                        "reply": "¿Sí? ¿Quién es usted y qué se le ofrece? No me haga salir a la puerta con este calorón para decirme solo 'hola'.",
+                        "coach": "Un simple saludo no es un gancho comercial. En prospección en frío, dejar vacíos de información ante un prospecto hostil dispara su impaciencia. Debes presentarte con tu nombre, la empresa (TXU Energy) y un marco de tiempo de inmediato.",
+                        "suggestions": [
+                            "Una disculpa por la interrupción: soy asesor oficial de TXU Energy, solo 15 segundos para no quitarle tiempo con este calor.",
+                            "Buenas tardes, disculpe la molestia. Vengo de TXU Energy con los vecinos para revisar el impacto del calor en el recibo de luz."
+                        ]
+                    },
+                    "BUSY": {
+                        "patience": -10, "interest": 0,
+                        "reply": "Buenas tardes... dígame rápido joven que voy de salida con el tiempo medido. ¿Qué se le ofrece?",
+                        "coach": "Falta de gancho de tiempo y motivo. Un cliente con prisa necesita saber en los primeros 5 segundos quién eres y qué beneficio concreto le ofreces.",
+                        "suggestions": [
+                            "Solo 15 segundos porque veo que va saliendo: TXU da 50% de descuento en luz en verano. ¿A qué hora le encuentro para hacer el cálculo?",
+                            "Una disculpa, voy directo al grano en 10 segundos: represento a TXU Energy para proteger su tarifa de verano."
+                        ]
+                    },
+                    "SKEPTICAL": {
+                        "patience": -5, "interest": -5,
+                        "reply": "¿Sí? ¿Quién es usted y de parte de quién viene? No acostumbro abrirle a desconocidos.",
+                        "coach": "Alerta de desconfianza. Sin identificación corporativa ni gafete a la vista, el cliente escéptico asume que se trata de un desconocido sospechoso.",
+                        "suggestions": [
+                            "Buenas tardes señor, asesor oficial de TXU Energy con gafete verificado. No le pido firmas ni datos hoy, solo informarle de la tarifa protegida.",
+                            "Buenas tardes, represento a TXU Energy en esta cuadra. ¿Cómo le ha ido con el recibo en estos meses de calor?"
+                        ]
+                    },
+                    "POLITE_EVASIVE": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes... dígame, ¿en qué le puedo ayudar? Si viene a vender algo, ¿tiene algún folleto que me deje para revisarlo luego?",
+                        "coach": "Saludo cortés pero inerte. Sin una presentación clara ni pregunta de diagnóstico sobre su factura, el prospecto evasivo toma el control para despedirte con el folleto.",
+                        "suggestions": [
+                            "Con gusto vecina, soy de TXU Energy. Solo una pregunta rápida antes de dejárselo: ¿su recibo suele subir mucho en julio?",
+                            "Buenas tardes Doña Elena, vengo de TXU Energy para revisar si califica al 50% de descuento en verano con Season Pass."
+                        ]
+                    },
+                    "IDEAL_LEAD": {
+                        "patience": 0, "interest": +5,
+                        "reply": "Buenas tardes. Dígame, ¿de qué empresa viene o qué se le ofrece?",
+                        "coach": "El prospecto es accesible pero necesitas presentarte y abrir con el motivo de visita para despertar su interés en el ahorro.",
+                        "suggestions": [
+                            "Buenas tardes, represento a TXU Energy. Vengo porque con este calor los recibos de luz se están disparando en la colonia.",
+                            "Soy asesor de TXU Energy, ¿su última factura de luz vino muy alta por el aire acondicionado?"
+                        ]
+                    },
+                    "BARGAIN_HUNTER": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes. ¿De qué compañía es y qué producto trae?",
+                        "coach": "Presenta tu empresa y el beneficio financiero de entrada. El cliente analítico necesita saber rápidamente de qué se trata.",
+                        "suggestions": [
+                            "Buenas tardes, soy asesor de TXU Energy. Estamos ofreciendo planes con tarifa fija protegida desde 12.8 centavos por kWh.",
+                            "De TXU Energy, con 50% de descuento en luz en verano. ¿Cuánto paga actualmente por kWh?"
+                        ]
+                    },
+                    "NON_DECISION_MAKER": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes... dígame, ¿qué necesita?",
+                        "coach": "Identifícate con cordialidad para no intimidar a quien no toma las decisiones en el hogar.",
+                        "suggestions": [
+                            "Buenas tardes, vengo de TXU Energy con información del ahorro de verano para los vecinos de la cuadra.",
+                            "Buenas tardes, solo una pregunta rápida: ¿a qué hora suele estar el titular de la cuenta de luz para dejarle un comparativo?"
+                        ]
+                    },
+                    "LOYALIST": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes joven. ¿Qué se le ofrece por aquí?",
+                        "coach": "Presenta a TXU Energy con respeto para no activar de inmediato su barrera de fidelidad hacia su proveedor actual.",
+                        "suggestions": [
+                            "Buenas tardes señor, soy asesor de TXU Energy. Vengo informando a los vecinos sobre cómo proteger la tarifa con Oncor en verano.",
+                            "Buenas tardes vecino, disculpe la molestia. ¿Cómo le ha ido con el servicio de electricidad en esta temporada?"
+                        ]
+                    },
+                    "TECH_SAVVY": {
+                        "patience": 0, "interest": 0,
+                        "reply": "Buenas tardes. ¿Quién es y qué servicio promueve?",
+                        "coach": "Presentación incompleta. Un perfil técnico valora la precisión y directriz inmediata.",
+                        "suggestions": [
+                            "Buenas tardes, soy de TXU Energy. Traemos el plan Free Nights con electricidad 100% gratuita de noche.",
+                            "Buenas tardes, asesor oficial de TXU Energy con planes para hogares inteligentes y vehículos eléctricos."
+                        ]
+                    },
+                }
             res_data = BARE_OPENING_RESPONSES.get(archetype, BARE_OPENING_RESPONSES["POLITE_EVASIVE"])
             patience_change = res_data["patience"]
             interest_change = res_data["interest"]

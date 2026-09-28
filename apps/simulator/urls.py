@@ -10,4 +10,6 @@ urlpatterns = [
     path('tts/', views.tts_view, name='tts_view'),
     path('next/', views.next_door, name='next_door'),
     path('reset/', views.reset_chat, name='reset_chat'),
+    path('mode/', views.set_prospecting_mode, name='set_prospecting_mode'),
 ]
+

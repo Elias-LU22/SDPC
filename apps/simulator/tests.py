@@ -39,7 +39,10 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertIn('Gancho de apertura:', updated_door['messages'][1]['coach'])
 
     def test_ring_doorbell_view(self):
-        # Cargar primera puerta
+        # Cargar primera puerta en modo DOOR
+        session = self.client.session
+        session['prospecting_mode'] = 'DOOR'
+        session.save()
         self.client.get(reverse('simulator:chat_view'))
         self.assertFalse(self.client.session['door_state']['doorbell_rung'])
 
@@ -50,6 +53,9 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertContains(resp, 'Timbre Activado')
 
     def test_chat_view_loads_clean_ui(self):
+        session = self.client.session
+        session['prospecting_mode'] = 'DOOR'
+        session.save()
         response = self.client.get(reverse('simulator:chat_view'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Puerta #')
@@ -157,6 +163,9 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertTrue(len(door['porch_observation']) > 5)
 
     def test_next_door_cycles_without_immediate_repetition(self):
+        session = self.client.session
+        session['prospecting_mode'] = 'DOOR'
+        session.save()
         self.client.get(reverse('simulator:chat_view'))
         initial_door = self.client.session.get('door_state')
         previous_name = initial_door['resident_name']
@@ -365,6 +374,86 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertLessEqual(result['patience'], 30)
         last_reply = result['messages'][-1]['text']
         self.assertIn("seguir saludando", last_reply.lower())
+
+    def test_set_prospecting_mode_endpoint(self):
+        """Verifica que el endpoint /chat/mode/ actualice la sesión y devuelva el modo solicitado."""
+        # 1. Cambiar a modo Tienda
+        resp = self.client.post(reverse('simulator:set_prospecting_mode'), {'mode': 'STORE'}, HTTP_HX_REQUEST='true')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(self.client.session.get('prospecting_mode'), 'STORE')
+        door = self.client.session.get('door_state')
+        self.assertEqual(door['encounter_type'], 'STORE')
+        self.assertContains(resp, 'Abordar Comprador')
+
+        # 2. Cambiar a modo Puerta
+        resp_door = self.client.post(reverse('simulator:set_prospecting_mode'), {'mode': 'DOOR'}, HTTP_HX_REQUEST='true')
+        self.assertEqual(resp_door.status_code, 200)
+        self.assertEqual(self.client.session.get('prospecting_mode'), 'DOOR')
+        door2 = self.client.session.get('door_state')
+        self.assertEqual(door2['encounter_type'], 'DOOR')
+        self.assertContains(resp_door, 'Tocar Timbre')
+
+        # 3. Cambiar a modo Aleatorio
+        resp_rand = self.client.post(reverse('simulator:set_prospecting_mode'), {'mode': 'RANDOM'}, HTTP_HX_REQUEST='true')
+        self.assertEqual(resp_rand.status_code, 200)
+        self.assertEqual(self.client.session.get('prospecting_mode'), 'RANDOM')
+
+    def test_create_store_encounter_structure(self):
+        """Verifica la generación de prospectos en puertas y kioscos de tiendas de autoservicio."""
+        from apps.simulator.chat_engine import create_new_door, RETAIL_LOCATIONS
+        store_encounter = create_new_door(mode='STORE')
+        self.assertEqual(store_encounter['encounter_type'], 'STORE')
+        self.assertIn(store_encounter['location_name'], RETAIL_LOCATIONS)
+        self.assertEqual(store_encounter['trigger_action_label'], 'Abordar Comprador')
+        self.assertEqual(store_encounter['trigger_sound'], 'store_chime')
+        self.assertIsNotNone(store_encounter['door_number'])
+        self.assertTrue(len(store_encounter['porch_observation']) > 5)
+        self.assertIn('Kiosco', store_encounter['location_detail'])
+
+    def test_store_encounter_evaluation_gift_card_and_hurry(self):
+        """Verifica que ganchos comerciales orientados al retail (tarjetas de regalo, empatía con víveres) sean reconocidos por el coach."""
+        from apps.simulator.chat_engine import create_new_door, evaluate_response_local
+        store_encounter = create_new_door(mode='STORE')
+        store_encounter['archetype'] = 'BUSY'
+        store_encounter['patience'] = 45
+        store_encounter['interest'] = 20
+        store_encounter['turn'] = 0
+        store_encounter['messages'] = []
+
+        hook_text = "Buenas tardes vecino, no le detengo el paso con sus bolsas: en el kiosco de TXU le regalamos una gift card de $50 al revisar su recibo."
+        result = evaluate_response_local(hook_text, store_encounter)
+        self.assertGreater(result['interest'], 20)
+        coach = result['messages'][-1]['coach']
+        self.assertTrue('kiosco' in coach.lower() or 'retail' in coach.lower() or 'gancho' in coach.lower())
+
+    def test_store_bare_greeting_penalized(self):
+        """Un saludo plano sin gancho mientras el cliente sale apresurado con mandado de la tienda debe penalizar la paciencia."""
+        from apps.simulator.chat_engine import create_new_door, evaluate_response_local
+        store_encounter = create_new_door(mode='STORE')
+        store_encounter['archetype'] = 'BUSY'
+        store_encounter['patience'] = 50
+        store_encounter['interest'] = 20
+        store_encounter['turn'] = 0
+        store_encounter['messages'] = []
+
+        result = evaluate_response_local("hola buenas tardes", store_encounter)
+        self.assertLess(result['patience'], 50)
+        coach = result['messages'][-1]['coach']
+        self.assertIn("retail", coach.lower())
+        reply = result['messages'][-1]['text'].lower()
+        self.assertTrue('mandado' in reply or 'paso' in reply or 'prisa' in reply or 'carrito' in reply or 'hielo' in reply or 'rápido' in reply)
+
+    def test_mode_selector_rendered_in_chat_view(self):
+        """Verifica que la barra de control de modalidad (Aleatorio, Puerta, Tienda) se renderice en la vista principal."""
+        resp = self.client.get(reverse('simulator:chat_view'))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
+        self.assertIn('mode-selector-bar', content)
+        self.assertIn('Aleatorio', content)
+        self.assertIn('Puerta', content)
+        self.assertIn('Tienda', content)
+        self.assertIn(reverse('simulator:set_prospecting_mode'), content)
+
 
 
 
