@@ -901,8 +901,8 @@ const VoiceIntercom = (function() {
         if (document.documentElement.lang !== lang) {
             document.documentElement.lang = lang;
         }
-        if (speechRecInstance) {
-            speechRecInstance.lang = (lang === 'en' ? 'en-US' : 'es-US');
+        if (recognition) {
+            recognition.lang = (lang === 'en' ? 'en-US' : 'es-US');
         }
 
         currentGender = getResidentGender();
@@ -935,14 +935,15 @@ const VoiceIntercom = (function() {
         unlockAudio();
         playDoorbell();
         currentGender = getResidentGender();
-        updateStatusBadge('Timbre sonando...', 'amber');
+        const isEnglish = (getAppLanguage() === 'en');
+        updateStatusBadge(isEnglish ? 'Doorbell ringing...' : 'Timbre sonando...', 'amber');
 
         // Tras el timbre acústico, activar el micrófono para que el vendedor hable primero
         setTimeout(() => {
             if (!isListening) {
                 startListening();
             }
-            updateStatusBadge('Micrófono activo: Presenta tu gancho de apertura', 'emerald');
+            updateStatusBadge(isEnglish ? 'Microphone active: Deliver your opening hook' : 'Micrófono activo: Presenta tu gancho de apertura', 'emerald');
         }, 900);
     }
 
@@ -951,14 +952,15 @@ const VoiceIntercom = (function() {
         unlockAudio();
         playStoreChime();
         currentGender = getResidentGender();
-        updateStatusBadge('Abordaje iniciado en tienda...', 'amber');
+        const isEnglish = (getAppLanguage() === 'en');
+        updateStatusBadge(isEnglish ? 'Shopper approach initiated...' : 'Abordaje iniciado en tienda...', 'amber');
 
         // Tras el tono de tienda, activar el micrófono para que el vendedor hable primero
         setTimeout(() => {
             if (!isListening) {
                 startListening();
             }
-            updateStatusBadge('Micrófono activo: Presenta tu gancho de abordaje', 'emerald');
+            updateStatusBadge(isEnglish ? 'Microphone active: Deliver your store hook' : 'Micrófono activo: Presenta tu gancho de abordaje', 'emerald');
         }, 750);
     }
 

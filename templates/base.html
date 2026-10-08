@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}TXU Energy - Simulador de Ventas y Asesoría Comercial{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/txu_door_logo.svg' %}">
+    <link rel="alternate icon" href="{% static 'img/txu_door_logo.svg' %}">
     <!-- Script de Inicialización Temprana: Modo Claro es el predeterminado -->
     <script>
         (function() {
@@ -25,6 +27,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Tailwind CSS CDN con Dark Mode por Clase -->
+    <script>
+        (function() {
+            const origWarn = console.warn;
+            console.warn = function(...args) {
+                if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) {
+                    return;
+                }
+                origWarn.apply(console, args);
+            };
+        })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
