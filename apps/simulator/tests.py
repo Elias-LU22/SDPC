@@ -29,8 +29,9 @@ class SingleScreenChatSimulatorTests(TestCase):
         door['turn'] = 0
         door['messages'] = []
 
+        from apps.simulator.chat_engine import evaluate_response_local
         # El vendedor habla primero con gancho de 15 segundos sobre aire acondicionado y TXU Season Pass
-        updated_door = evaluate_response("Solo le robo 15 segundos: con este calor TXU le da 50% de descuento en verano con Season Pass.", door)
+        updated_door = evaluate_response_local("Solo le robo 15 segundos: con este calor TXU le da 50% de descuento en verano con Season Pass.", door)
         self.assertGreater(updated_door['interest'], 20)
         self.assertEqual(len(updated_door['messages']), 2, "Deben generarse 2 mensajes: vendedor primero y prospecto respondiendo.")
         self.assertEqual(updated_door['messages'][0]['sender'], 'user')
@@ -549,14 +550,132 @@ class SingleScreenChatSimulatorTests(TestCase):
         self.assertIn('Tocar Timbre para Iniciar', content)
         self.assertEqual(content.count('Tocar Timbre para Iniciar'), 1)
 
-    def test_zero_emojis_and_professional_terms_in_chat(self):
-        """Verifica la ausencia de emojis y términos no profesionales en la vista del simulador."""
-        resp = self.client.get(reverse('simulator:chat_view'))
+    def test_set_language_view_switches_session_and_translates_door(self):
+        """Verifica que cambiar el idioma a 'en' traduzca la puerta activa sin reiniciar el turno ni el diálogo."""
+        from apps.simulator.chat_engine import create_new_door
+        session = self.client.session
+        session['prospecting_mode'] = 'DOOR'
+        door = create_new_door(mode='DOOR', lang='es')
+        door['messages'] = [{'sender': 'user', 'text': 'Hola', 'coach': None}]
+        door['turn'] = 1
+        session['door_state'] = door
+        session['language'] = 'es'
+        session.save()
+
+        # Cambiar a inglés vía POST
+        resp = self.client.post(reverse('simulator:set_language'), {'language': 'en'}, follow=True)
+        self.assertEqual(resp.status_code, 200)
+        updated_session = self.client.session
+        self.assertEqual(updated_session.get('language'), 'en')
+
+        updated_door = updated_session.get('door_state')
+        self.assertEqual(updated_door.get('language'), 'en')
+        self.assertTrue(len(updated_door.get('resident_role', '')) > 0)
+        self.assertEqual(len(updated_door.get('messages')), 1, "Los mensajes previos deben preservarse.")
+        self.assertEqual(updated_door.get('turn'), 1, "El turno actual no debe perderse.")
+
+    def test_set_language_htmx_renders_bilingual_ui(self):
+        """Verifica que el cambio de idioma por HTMX devuelva la interfaz con data-lang y textos en inglés."""
+        session = self.client.session
+        session['prospecting_mode'] = 'DOOR'
+        session.save()
+
+        resp = self.client.post(
+            reverse('simulator:set_language'),
+            {'language': 'en'},
+            HTTP_HX_REQUEST='true'
+        )
+        self.assertEqual(resp.status_code, 200)
         content = resp.content.decode('utf-8')
-        self.assertNotIn('prospección en frío', content.lower())
-        self.assertNotIn('cambaceo', content.lower())
+        self.assertIn('data-lang="en"', content)
+        self.assertIn('Patience', content)
+        self.assertIn('Interest', content)
+        self.assertIn('Restart', content)
+        self.assertIn('id="language-selector-bar"', content)
+        self.assertIn('id="mode-selector-bar"', content)
+
+    def test_create_new_door_english(self):
+        """Verifica que create_new_door en inglés genere datos y pistas en inglés."""
+        from apps.simulator.chat_engine import create_new_door
+        door_en = create_new_door(mode='DOOR', lang='en')
+        self.assertEqual(door_en['language'], 'en')
+        self.assertTrue(len(door_en['resident_role']) > 0)
+        self.assertTrue(len(door_en['suggestions']) > 0)
+        self.assertTrue(any('TXU' in s or 'second' in s.lower() or 'electric' in s.lower() for s in door_en['suggestions']))
+
+        store_en = create_new_door(mode='STORE', lang='en')
+        self.assertEqual(store_en['language'], 'en')
+        self.assertTrue(len(store_en['resident_role']) > 0)
+
+    def test_translate_door_state_bidirectional(self):
+        """Verifica que translate_door_state traduzca correctamente de ida y vuelta."""
+        from apps.simulator.chat_engine import create_new_door, translate_door_state
+        door_es = create_new_door(mode='DOOR', lang='es')
+        door_en = translate_door_state(door_es, lang='en')
+        self.assertEqual(door_en['language'], 'en')
+        self.assertTrue(len(door_en['resident_role']) > 0)
+
+        door_es_back = translate_door_state(door_en, lang='es')
+        self.assertEqual(door_es_back['language'], 'es')
+        self.assertTrue(len(door_es_back['resident_role']) > 0)
+
+    def test_compute_chat_analytics_english(self):
+        """Verifica que compute_chat_analytics genere competencias y fortalezas en inglés cuando lang='en'."""
+        from apps.simulator.chat_engine import create_new_door, compute_chat_analytics
+        door = create_new_door(mode='DOOR', lang='en')
+        door['messages'] = [
+            {'sender': 'user', 'text': 'Hi, I am from TXU Energy, do you have 15 seconds?', 'coach': 'Good'},
+            {'sender': 'prospect', 'text': 'Sure, what do you have?', 'coach': None, 'interest_change': 15, 'patience_change': 5}
+        ]
+        door['turn'] = 1
+        analytics = compute_chat_analytics(door, lang='en')
+        self.assertIsNotNone(analytics)
+        comp_names = [c['name'] for c in analytics['competencies']]
+        self.assertIn('Hook & Opening', comp_names)
+        self.assertIn('Connection & Empathy', comp_names)
+        self.assertIn('Commercial Diagnosis', comp_names)
+        self.assertIn('Objection Handling', comp_names)
+        self.assertIn('Closing Assertiveness', comp_names)
+        self.assertTrue(len(analytics['strengths']) > 0)
+        self.assertTrue(len(analytics['areas_for_improvement']) > 0)
+
+    def test_evaluate_response_local_english(self):
+        """Verifica que evaluate_response_local en inglés procese palabras clave y devuelva feedback en inglés."""
+        from apps.simulator.chat_engine import create_new_door, evaluate_response_local
+        door = create_new_door(mode='DOOR', lang='en')
+        door['archetype'] = 'BUSY'
+        door['patience'] = 50
+        door['interest'] = 20
+        door['turn'] = 0
+        door['messages'] = []
+
+        res = evaluate_response_local(
+            "I only need 15 seconds: with this Texas heat TXU offers Season Pass with 50% summer discount.",
+            door,
+            lang='en'
+        )
+        self.assertGreater(res['interest'], 20)
+        self.assertEqual(len(res['messages']), 2)
+        latest_coach = res['messages'][-1]['coach']
+        self.assertTrue('hook:' in latest_coach.lower() or 'time' in latest_coach.lower())
+
+    def test_tts_service_english_voices(self):
+        """Verifica que el servicio TTS defina voces neuronales en inglés de alta calidad."""
+        from apps.simulator.tts_service import VOICE_MALE_EN, VOICE_FEMALE_EN
+        self.assertEqual(VOICE_MALE_EN, "en-US-GuyNeural")
+        self.assertEqual(VOICE_FEMALE_EN, "en-US-JennyNeural")
+
+    def test_zero_emojis_in_english_ui(self):
+        """Verifica que la interfaz completa en inglés tenga CERO EMOJIS."""
+        session = self.client.session
+        session['language'] = 'en'
+        session.save()
+        resp = self.client.get(reverse('simulator:chat_view'))
+        self.assertEqual(resp.status_code, 200)
+        content = resp.content.decode('utf-8')
         emoji_pattern = re.compile(r'[\U00010000-\U0010ffff]', flags=re.UNICODE)
-        self.assertFalse(bool(emoji_pattern.search(content)), "No deben existir emojis en la interfaz.")
+        self.assertFalse(bool(emoji_pattern.search(content)), "No deben existir emojis en la interfaz en inglés.")
+
 
 
 

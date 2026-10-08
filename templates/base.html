@@ -1,6 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="es" class="h-full antialiased">
+<html lang="{{ language|default:'es' }}" class="h-full antialiased">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -316,15 +316,16 @@
             const sunIcon = document.getElementById('theme-icon-sun');
             const moonIcon = document.getElementById('theme-icon-moon');
             const themeText = document.getElementById('theme-text');
+            const isEn = (document.documentElement.lang || 'es').toLowerCase().startsWith('en');
             if (sunIcon && moonIcon && themeText) {
                 if (isDark) {
                     sunIcon.classList.add('hidden');
                     moonIcon.classList.remove('hidden');
-                    themeText.textContent = 'Modo Oscuro';
+                    themeText.textContent = isEn ? 'Dark Mode' : 'Modo Oscuro';
                 } else {
                     sunIcon.classList.remove('hidden');
                     moonIcon.classList.add('hidden');
-                    themeText.textContent = 'Modo Claro';
+                    themeText.textContent = isEn ? 'Light Mode' : 'Modo Claro';
                 }
             }
         }
@@ -434,8 +435,8 @@
                 <div class="space-y-1.5">
                     <div class="flex items-center gap-2">
                         <span class="text-xs font-bold text-slate-800 dark:text-slate-200">${escapeHtml(residentName)}</span>
-                        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5">Residente</span>
-                        <span class="text-[11px] font-mono text-teal-600 dark:text-teal-400 animate-pulse font-medium">pensando...</span>
+                        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5">${(document.documentElement.lang === 'en') ? 'Customer' : 'Residente'}</span>
+                        <span class="text-[11px] font-mono text-teal-600 dark:text-teal-400 animate-pulse font-medium">${(document.documentElement.lang === 'en') ? 'thinking...' : 'pensando...'}</span>
                     </div>
                     <div class="liquid-card px-4 py-3.5 rounded-2xl rounded-tl-sm text-sm text-slate-700 dark:text-slate-300 shadow-md flex items-center gap-3">
                         <div class="flex items-center gap-1.5 px-0.5">
@@ -443,7 +444,7 @@
                             <span class="w-2 h-2 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce" style="animation-delay: 180ms; animation-duration: 0.9s;"></span>
                             <span class="w-2 h-2 rounded-full bg-teal-500 dark:bg-teal-400 animate-bounce" style="animation-delay: 360ms; animation-duration: 0.9s;"></span>
                         </div>
-                        <span class="text-xs text-slate-600 dark:text-slate-300">Escuchando propuesta y procesando objeción...</span>
+                        <span class="text-xs text-slate-600 dark:text-slate-300">${(document.documentElement.lang === 'en') ? 'Listening to proposal and processing objection...' : 'Escuchando propuesta y procesando objeción...'}</span>
                     </div>
                 </div>
             `;
@@ -458,6 +459,12 @@
             const inputField = document.getElementById('message-input');
             const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || (window.innerWidth < 768);
             const isHandsFree = (typeof VoiceIntercom !== 'undefined' && VoiceIntercom.isHandsFreeMode && VoiceIntercom.isHandsFreeMode());
+
+            // Sincronizar lang en <html> si chat-container trae data-lang
+            const chatContainer = document.getElementById('chat-container');
+            if (chatContainer && chatContainer.getAttribute('data-lang')) {
+                document.documentElement.lang = chatContainer.getAttribute('data-lang');
+            }
 
             if (inputField) {
                 inputField.readOnly = false;
@@ -477,10 +484,12 @@
         // Manejo de error de conexión
         document.body.addEventListener('htmx:responseError', function(evt) {
             const thinking = document.getElementById('prospect-thinking-indicator');
+            const isEnglish = (document.documentElement.lang === 'en');
+            const errorMsg = isEnglish ? 'Could not obtain response from model. Please verify connection or try again.' : 'No se pudo obtener respuesta del modelo. Verifique la conexión o intente nuevamente.';
             if (thinking) {
                 thinking.innerHTML = `
                     <div class="p-3 bg-rose-100 dark:bg-rose-950/80 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded-lg text-xs">
-                        No se pudo obtener respuesta del modelo. Verifique la conexión o intente nuevamente.
+                        ${errorMsg}
                     </div>
                 `;
             }

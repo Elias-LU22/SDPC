@@ -1,5 +1,12 @@
 import random
 import re
+from .i18n_strings import (
+    get_archetype_info,
+    get_shopper_info,
+    get_resident_role,
+    ANALYTICS_I18N,
+    localize_local_output,
+)
 
 RESIDENTS = [
     {"name": "Fernando López", "role": "Propietario / Casa 2 pisos en Dallas", "archetype": "BUSY", "gender": "M"},
@@ -318,13 +325,16 @@ RETAIL_SHOPPERS = [
 ]
 
 
-def create_new_door(mode="DOOR", exclude_name=None, exclude_archetype=None, visited_names=None, current_door_num=None):
+def create_new_door(mode="DOOR", exclude_name=None, exclude_archetype=None, visited_names=None, current_door_num=None, lang="es"):
     """
     Genera un nuevo prospecto según la modalidad activa (Puerta a Puerta, Puerta de Tienda o Aleatorio).
     Garantiza variedad en residentes/compradores y arquetipos, evitando repetir el prospecto o tema inmediatamente.
+    Soporta generación bilingüe ('es' o 'en').
     """
     if visited_names is None:
         visited_names = []
+
+    target_lang = (lang or "es").lower()
 
     # Determinar si el encuentro actual será en puerta residencial o en tienda
     active_mode = (mode or "RANDOM").upper()
@@ -354,21 +364,42 @@ def create_new_door(mode="DOOR", exclude_name=None, exclude_archetype=None, visi
         else:
             door_num = random.choice([102, 104, 106, 108, 110, 114, 116])
 
+        if target_lang == "en":
+            shopper_info = get_shopper_info(shopper["name"], "en")
+            arch_info = get_archetype_info(arch_key, "en")
+            loc_name = shopper_info.get("location", shopper["location"])
+            loc_detail = "Commercial Kiosk / Store Entrance"
+            res_role = shopper_info.get("role", shopper["role"])
+            arch_title = arch_info.get("title", arch_data["title"])
+            arch_desc = arch_info.get("description", arch_data["description"])
+            obs = shopper_info.get("store_observation", shopper["store_observation"])
+            action_label = "Approach Shopper"
+            suggestions = shopper_info.get("opening_hooks", arch_info.get("opening_hooks", shopper.get("opening_hooks", arch_data.get("opening_hooks", arch_data["suggestions"]))))
+        else:
+            loc_name = shopper["location"]
+            loc_detail = "Kiosco Comercial / Entrada de Tienda"
+            res_role = shopper["role"]
+            arch_title = arch_data["title"]
+            arch_desc = arch_data["description"]
+            obs = shopper["store_observation"]
+            action_label = "Abordar Comprador"
+            suggestions = shopper.get("opening_hooks", arch_data.get("opening_hooks", arch_data["suggestions"]))
+
         return {
             "encounter_type": "STORE",
             "prospecting_mode": active_mode,
-            "location_name": shopper["location"],
-            "location_detail": "Kiosco Comercial / Entrada de Tienda",
+            "location_name": loc_name,
+            "location_detail": loc_detail,
             "door_number": door_num,
             "resident_name": shopper["name"],
-            "resident_role": shopper["role"],
+            "resident_role": res_role,
             "resident_gender": shopper.get("gender", "M"),
             "archetype": arch_key,
-            "archetype_title": arch_data["title"],
-            "archetype_description": arch_data["description"],
-            "porch_observation": shopper["store_observation"],
-            "context_observation": shopper["store_observation"],
-            "trigger_action_label": "Abordar Comprador",
+            "archetype_title": arch_title,
+            "archetype_description": arch_desc,
+            "porch_observation": obs,
+            "context_observation": obs,
+            "trigger_action_label": action_label,
             "trigger_sound": "store_chime",
             "patience": arch_data["initial_patience"],
             "interest": arch_data["initial_interest"],
@@ -376,7 +407,8 @@ def create_new_door(mode="DOOR", exclude_name=None, exclude_archetype=None, visi
             "turn": 0,
             "doorbell_rung": False,  # True cuando se aborda al comprador
             "messages": [],
-            "suggestions": shopper.get("opening_hooks", arch_data.get("opening_hooks", arch_data["suggestions"])),
+            "suggestions": suggestions,
+            "language": target_lang,
         }
     else:
         # Selección de residente puerta a puerta
@@ -397,21 +429,41 @@ def create_new_door(mode="DOOR", exclude_name=None, exclude_archetype=None, visi
         else:
             door_num = random.choice([102, 104, 106, 108, 110, 114, 116])
 
+        if target_lang == "en":
+            arch_info = get_archetype_info(arch_key, "en")
+            res_role = get_resident_role(resident["name"], "en")
+            loc_name = f"Door #{door_num}"
+            loc_detail = "Texas Residence"
+            arch_title = arch_info.get("title", arch_data["title"])
+            arch_desc = arch_info.get("description", arch_data["description"])
+            obs = arch_info.get("porch_observation", arch_data.get("porch_observation", "At front porch observing the advisor."))
+            action_label = "Ring Doorbell"
+            suggestions = arch_info.get("opening_hooks", arch_info.get("suggestions", arch_data.get("opening_hooks", arch_data["suggestions"])))
+        else:
+            res_role = resident["role"]
+            loc_name = f"Puerta #{door_num}"
+            loc_detail = "Residencia en Texas"
+            arch_title = arch_data["title"]
+            arch_desc = arch_data["description"]
+            obs = arch_data.get("porch_observation", "En su puerta residencial observando al asesor.")
+            action_label = "Tocar Timbre"
+            suggestions = arch_data.get("opening_hooks", arch_data["suggestions"])
+
         return {
             "encounter_type": "DOOR",
             "prospecting_mode": active_mode,
-            "location_name": f"Puerta #{door_num}",
-            "location_detail": "Residencia en Texas",
+            "location_name": loc_name,
+            "location_detail": loc_detail,
             "door_number": door_num,
             "resident_name": resident["name"],
-            "resident_role": resident["role"],
+            "resident_role": res_role,
             "resident_gender": resident.get("gender", "M"),
             "archetype": arch_key,
-            "archetype_title": arch_data["title"],
-            "archetype_description": arch_data["description"],
-            "porch_observation": arch_data.get("porch_observation", "En su puerta residencial observando al asesor."),
-            "context_observation": arch_data.get("porch_observation", "En su puerta residencial observando al asesor."),
-            "trigger_action_label": "Tocar Timbre",
+            "archetype_title": arch_title,
+            "archetype_description": arch_desc,
+            "porch_observation": obs,
+            "context_observation": obs,
+            "trigger_action_label": action_label,
             "trigger_sound": "doorbell",
             "patience": arch_data["initial_patience"],
             "interest": arch_data["initial_interest"],
@@ -419,7 +471,8 @@ def create_new_door(mode="DOOR", exclude_name=None, exclude_archetype=None, visi
             "turn": 0,
             "doorbell_rung": False,
             "messages": [],
-            "suggestions": arch_data.get("opening_hooks", arch_data["suggestions"]),
+            "suggestions": suggestions,
+            "language": target_lang,
         }
 
 
@@ -427,8 +480,56 @@ def create_new_door(mode="DOOR", exclude_name=None, exclude_archetype=None, visi
 create_new_encounter = create_new_door
 
 
+def translate_door_state(door_state, lang="es"):
+    """
+    Actualiza los textos descriptivos de un prospecto en sesión al cambiar de idioma
+    sin alterar el estado del diálogo ni los turnos acumulados.
+    """
+    if not door_state:
+        return door_state
 
-def compute_chat_analytics(door_state):
+    target_lang = (lang or "es").lower()
+    arch_key = door_state.get("archetype", "BUSY")
+    arch_info = get_archetype_info(arch_key, target_lang)
+    if arch_info:
+        door_state["archetype_title"] = arch_info.get("title", door_state.get("archetype_title"))
+        door_state["archetype_description"] = arch_info.get("description", door_state.get("archetype_description"))
+
+    encounter_type = door_state.get("encounter_type", "DOOR")
+    if encounter_type == "STORE":
+        shopper_info = get_shopper_info(door_state.get("resident_name"), target_lang)
+        if shopper_info:
+            door_state["location_name"] = shopper_info.get("location", door_state.get("location_name"))
+            door_state["resident_role"] = shopper_info.get("role", door_state.get("resident_role"))
+            door_state["porch_observation"] = shopper_info.get("store_observation", door_state.get("porch_observation"))
+            door_state["context_observation"] = shopper_info.get("store_observation", door_state.get("context_observation"))
+            if door_state.get("turn", 0) == 0 and not door_state.get("messages"):
+                door_state["suggestions"] = shopper_info.get("opening_hooks", arch_info.get("opening_hooks", []))
+        door_state["location_detail"] = "Commercial Kiosk / Store Entrance" if target_lang == "en" else "Kiosco Comercial / Entrada de Tienda"
+        door_state["trigger_action_label"] = "Approach Shopper" if target_lang == "en" else "Abordar Comprador"
+    else:
+        door_num = door_state.get("door_number", 102)
+        res_role = get_resident_role(door_state.get("resident_name"), target_lang)
+        if res_role:
+            door_state["resident_role"] = res_role
+        door_state["location_name"] = f"Door #{door_num}" if target_lang == "en" else f"Puerta #{door_num}"
+        door_state["location_detail"] = "Texas Residence" if target_lang == "en" else "Residencia en Texas"
+        door_state["trigger_action_label"] = "Ring Doorbell" if target_lang == "en" else "Tocar Timbre"
+        if arch_info:
+            door_state["porch_observation"] = arch_info.get("porch_observation", door_state.get("porch_observation"))
+            door_state["context_observation"] = arch_info.get("porch_observation", door_state.get("context_observation"))
+            if door_state.get("turn", 0) == 0 and not door_state.get("messages"):
+                door_state["suggestions"] = arch_info.get("opening_hooks", arch_info.get("suggestions", []))
+
+    door_state["language"] = target_lang
+    if door_state.get("analytics"):
+        door_state["analytics"] = compute_chat_analytics(door_state, lang=target_lang)
+
+    return door_state
+
+
+
+def compute_chat_analytics(door_state, lang="es"):
     """
     Genera un informe analítico integral de desempeño comercial al concluir la interacción o cuando
     el usuario solicita finalizar la sesión.
@@ -438,7 +539,10 @@ def compute_chat_analytics(door_state):
     - Fortalezas demostradas en el diálogo.
     - Áreas de mejora prioritarias con recomendaciones accionables.
     - Métricas clave de la sesión (turnos, deltas de interés y paciencia, resultado final).
+    Soporta generación bilingüe ('es' o 'en').
     """
+    target_lang = (lang or door_state.get("language", "es")).lower()
+    lang_catalog = ANALYTICS_I18N.get(target_lang, ANALYTICS_I18N['es'])
     status = door_state.get("status", "IN_PROGRESS")
     messages = door_state.get("messages", [])
     user_messages = [m["text"] for m in messages if m.get("sender") == "user"]
@@ -459,22 +563,22 @@ def compute_chat_analytics(door_state):
     hook_score = 40
     if first_msg:
         words = first_msg.split()
-        if len(words) <= 3 and any(first_msg.startswith(w) for w in ["hola", "buenas", "que tal"]):
+        if len(words) <= 3 and any(first_msg.startswith(w) for w in ["hola", "buenas", "que tal", "hello", "hi", "hey"]):
             hook_score = 25
         else:
-            if any(k in first_msg for k in ["txu", "energy", "compañía", "empresa", "represento"]):
+            if any(k in first_msg for k in ["txu", "energy", "compañía", "empresa", "represento", "company", "advisor", "rep"]):
                 hook_score += 25
-            if any(k in first_msg for k in ["15 segundo", "10 segundo", "un minuto", "rápido", "no le quito", "breve"]):
+            if any(k in first_msg for k in ["15 segundo", "10 segundo", "un minuto", "rápido", "no le quito", "breve", "15 second", "10 second", "minute", "quick"]):
                 hook_score += 20
-            if any(k in first_msg for k in ["calor", "aire", "descuento", "verano", "recibo", "factura", "tarjeta", "gift card", "50%"]):
+            if any(k in first_msg for k in ["calor", "aire", "descuento", "verano", "recibo", "factura", "tarjeta", "gift card", "50%", "heat", "summer", "bill", "discount", "power"]):
                 hook_score += 20
-            if any(k in first_msg for k in ["buenas", "hola", "mucho gusto", "disculpe", "vecin", "caballero"]):
+            if any(k in first_msg for k in ["buenas", "hola", "mucho gusto", "disculpe", "vecin", "caballero", "good afternoon", "excuse me", "neighbor", "hello"]):
                 hook_score += 15
     hook_score = max(20, min(98, hook_score))
 
     # 2. Competencia: Conexión y Empatía (Rapport) (0-100)
     empathy_score = 50
-    empathy_matches = len(re.findall(r'(entiendo|comprendo|tiene raz[oó]n|disculpe|gracias|con gusto|vecin|caballero|se[ñn]or|tranquil|con calma|no se preocupe|excelente)', combined_user_text))
+    empathy_matches = len(re.findall(r'(entiendo|comprendo|tiene raz[oó]n|disculpe|gracias|con gusto|vecin|caballero|se[ñn]or|tranquil|con calma|no se preocupe|excelente|understand|right|sorry|apolog|thank|neighbor|sir|ma\'am|worry|welcome)', combined_user_text))
     empathy_score += min(30, empathy_matches * 10)
     if patience_delta >= 10:
         empathy_score += 20
@@ -486,7 +590,7 @@ def compute_chat_analytics(door_state):
 
     # 3. Competencia: Diagnóstico y Calificación Comercial (0-100)
     diagnostic_score = 45
-    diag_matches = len(re.findall(r'(cu[aá]nto|recibo|factura|kwh|centav|oncor|compa[ñn][ií]a|contrato|aire|tarifa|fija|gasto|verano|\?)', combined_user_text))
+    diag_matches = len(re.findall(r'(cu[aá]nto|recibo|factura|kwh|centav|oncor|compa[ñn][ií]a|contrato|aire|tarifa|fija|gasto|verano|how much|bill|rate|fixed|summer|cents|usage|\?)', combined_user_text))
     diagnostic_score += min(45, diag_matches * 8)
     diagnostic_score = max(30, min(96, diagnostic_score))
 
@@ -499,7 +603,7 @@ def compute_chat_analytics(door_state):
     elif status == "REJECTED":
         objection_score = 35
     else:
-        obj_matches = len(re.findall(r'(garant[ií]a|60 d[ií]as|sin compromiso|oncor|mismos postes|season pass|free nights|descuento|subsidio|comparat)', combined_user_text))
+        obj_matches = len(re.findall(r'(garant[ií]a|60 d[ií]as|sin compromiso|oncor|mismos postes|season pass|free nights|descuento|subsidio|comparat|guarantee|60 days|no obligation|same wires|discount)', combined_user_text))
         objection_score += min(35, obj_matches * 10)
     objection_score = max(25, min(98, objection_score))
 
@@ -522,71 +626,80 @@ def compute_chat_analytics(door_state):
         closing_score * 0.20
     )
 
+    tiers = lang_catalog.get('tiers', {})
     if status == "SALE_CLOSED":
         overall_score = max(88, min(100, raw_score))
-        tier_label = "Cierre Maestro de Venta"
-        status_label = "Venta Cerrada con Éxito"
+        tier_label, status_label = tiers.get('SALE_CLOSED', ("Cierre Maestro de Venta", "Venta Cerrada con Éxito"))
         status_badge_class = "bg-teal-500/15 text-teal-700 dark:text-teal-300 border-teal-500/30"
     elif status == "APPOINTMENT":
         overall_score = max(75, min(87, raw_score))
-        tier_label = "Cita Comercial Calificada"
-        status_label = "Cita Comercial Agendada"
+        tier_label, status_label = tiers.get('APPOINTMENT', ("Cita Comercial Calificada", "Cita Comercial Agendada"))
         status_badge_class = "bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30"
     elif status == "REJECTED":
         overall_score = min(58, raw_score)
-        tier_label = "Oportunidad de Aprendizaje"
-        status_label = "Contacto Concluido sin Cierre"
+        tier_label, status_label = tiers.get('REJECTED', ("Oportunidad de Aprendizaje", "Contacto Concluido sin Cierre"))
         status_badge_class = "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30"
-    else: # COMPLETED or IN_PROGRESS
+    else:  # COMPLETED or IN_PROGRESS
         overall_score = max(40, min(90, raw_score))
-        tier_label = "Sesión Finalizada para Evaluación"
-        status_label = "Evaluación de Desempeño Comercial"
+        tier_label, status_label = tiers.get('COMPLETED', ("Sesión Finalizada para Evaluación", "Evaluación de Desempeño Comercial"))
         status_badge_class = "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30"
 
     # Fortalezas observadas
+    strengths_pool = lang_catalog.get('strengths_pool', [])
     strengths = []
-    if hook_score >= 70:
-        strengths.append("Gancho de entrada efectivo con identificación corporativa de TXU Energy y marco de tiempo.")
-    if empathy_score >= 70:
-        strengths.append("Excelente conexión humana, cortesía y contención emocional de la objeción.")
-    if diagnostic_score >= 65:
-        strengths.append("Preguntas de diagnóstico acertadas sobre el impacto del calor en la factura eléctrica.")
-    if objection_score >= 75:
-        strengths.append("Sólido manejo de objeciones destacando los beneficios clave de la tarifa protegida.")
-    if closing_score >= 80:
-        strengths.append("Asertividad en la propuesta de valor y aseguramiento del siguiente paso comercial.")
-    if not strengths:
-        strengths.append("Mantuvo la compostura profesional y el respeto durante todo el diálogo.")
-        strengths.append("Iniciativa para interactuar y explorar las necesidades del cliente.")
+    if hook_score >= 70 and len(strengths_pool) > 0:
+        strengths.append(strengths_pool[0])
+    if empathy_score >= 70 and len(strengths_pool) > 1:
+        strengths.append(strengths_pool[1])
+    if diagnostic_score >= 65 and len(strengths_pool) > 2:
+        strengths.append(strengths_pool[2])
+    if objection_score >= 75 and len(strengths_pool) > 3:
+        strengths.append(strengths_pool[3])
+    if closing_score >= 80 and len(strengths_pool) > 4:
+        strengths.append(strengths_pool[4])
+    if not strengths and len(strengths_pool) > 6:
+        strengths.append(strengths_pool[5])
+        strengths.append(strengths_pool[6])
 
     # Áreas de mejora prioritarias
+    improvements_pool = lang_catalog.get('improvements_pool', [])
     areas_for_improvement = []
-    if hook_score < 70:
-        areas_for_improvement.append("Fortalece la apertura: di tu nombre, TXU Energy y ofrece un marco de 15 segundos en tu primera frase para capturar la atención.")
-    if diagnostic_score < 65:
-        areas_for_improvement.append("Indaga antes de ofertar: pregunta cuántos centavos por kWh pagan o cuánto subió el recibo con el aire acondicionado.")
-    if empathy_score < 65:
-        areas_for_improvement.append("Aumenta la empatía: valida primero la queja del cliente ('lo entiendo perfectamente', 'tiene toda la razón') antes de argumentar.")
-    if objection_score < 75 and status != "SALE_CLOSED":
-        areas_for_improvement.append("Manejo de evasivas: si piden folleto o tienen prisa, no cedas el control; pide 30 segundos para revisar la factura o agenda una hora precisa.")
-    if closing_score < 75 and status != "SALE_CLOSED":
-        areas_for_improvement.append("Llamado al cierre: menciona la garantía de satisfacción de 60 días sin penalización para eliminar cualquier sensación de riesgo.")
-    if not areas_for_improvement:
-        areas_for_improvement.append("Continúa practicando cierres en menos turnos para optimizar tu tiempo de atención.")
-        areas_for_improvement.append("Personaliza aún más las ventajas según el perfil tecnológico o ahorrador de cada cliente.")
+    if hook_score < 70 and len(improvements_pool) > 0:
+        areas_for_improvement.append(improvements_pool[0])
+    if diagnostic_score < 65 and len(improvements_pool) > 1:
+        areas_for_improvement.append(improvements_pool[1])
+    if empathy_score < 65 and len(improvements_pool) > 2:
+        areas_for_improvement.append(improvements_pool[2])
+    if objection_score < 75 and status != "SALE_CLOSED" and len(improvements_pool) > 3:
+        areas_for_improvement.append(improvements_pool[3])
+    if closing_score < 75 and status != "SALE_CLOSED" and len(improvements_pool) > 4:
+        areas_for_improvement.append(improvements_pool[4])
+    if not areas_for_improvement and len(improvements_pool) > 6:
+        areas_for_improvement.append(improvements_pool[5])
+        areas_for_improvement.append(improvements_pool[6])
+
+    comps_def = lang_catalog.get('competencies', [
+        {"name": "Gancho y Apertura", "description": "Claridad en tiempo, empresa e impacto en los primeros 15s"},
+        {"name": "Conexión y Empatía", "description": "Rapport, escucha activa y validación de objeciones"},
+        {"name": "Diagnóstico Comercial", "description": "Preguntas sobre tarifa, consumo y factura eléctrica"},
+        {"name": "Manejo de Objeciones", "description": "Superación de barreras (folletos, prisa, proveedor actual)"},
+        {"name": "Asertividad de Cierre", "description": "Llamado a la acción, revisión de factura y garantía TXU"}
+    ])
+    comp_scores = [hook_score, empathy_score, diagnostic_score, objection_score, closing_score]
+    competencies_out = []
+    for idx, c in enumerate(comps_def):
+        competencies_out.append({
+            "name": c["name"],
+            "score": comp_scores[idx] if idx < len(comp_scores) else 50,
+            "description": c["description"]
+        })
 
     return {
         "overall_score": overall_score,
         "tier_label": tier_label,
         "status_label": status_label,
         "status_badge_class": status_badge_class,
-        "competencies": [
-            {"name": "Gancho y Apertura", "score": hook_score, "description": "Claridad en tiempo, empresa e impacto en los primeros 15s"},
-            {"name": "Conexión y Empatía", "score": empathy_score, "description": "Rapport, escucha activa y validación de objeciones"},
-            {"name": "Diagnóstico Comercial", "score": diagnostic_score, "description": "Preguntas sobre tarifa, consumo y factura eléctrica"},
-            {"name": "Manejo de Objeciones", "score": objection_score, "description": "Superación de barreras (folletos, prisa, proveedor actual)"},
-            {"name": "Asertividad de Cierre", "score": closing_score, "description": "Llamado a la acción, revisión de factura y garantía TXU"}
-        ],
+        "competencies": competencies_out,
         "strengths": strengths[:3],
         "areas_for_improvement": areas_for_improvement[:3],
         "metrics": {
@@ -600,49 +713,51 @@ def compute_chat_analytics(door_state):
 
 
 
-def evaluate_response_local(user_text, door_state):
+def evaluate_response_local(user_text, door_state, lang="es"):
     """
     Evalúa la respuesta del asesor comercial de TXU Energy usando el motor
     local de respaldo con reglas de asesoría comercial y arquetipos residenciales.
     Diferencia con precisión entre el gancho de apertura (Turno 0) y los
     turnos intermedios o de cierre (Turno >= 1) para evitar confusiones de contexto.
+    Soporta evaluación y respuestas bilingües ('es' o 'en').
     """
+    target_lang = (lang or door_state.get("language", "es")).lower()
     text = user_text.lower().strip()
     archetype = door_state["archetype"]
     turn = door_state.get("turn", 0)
     messages = door_state.get("messages", [])
     is_opening_turn = (len(messages) == 0) or (turn == 0)
 
-    # Detección de patrones en contexto de energía eléctrica TXU
-    has_time_hook = bool(re.search(r'(15 segundo|r[aá]pido|no le quito tiempo|solo un minuto|un momento|de pasada|10 segundo)', text))
-    has_pain_probe = bool(re.search(r'(cu[aá]nto paga|recibo|factura|cobro|luz|electricidad|verano|calor|aire acondicionado|a/c|clima|subi[oó]|car[oa]|tarifa variable|consum)', text))
-    has_neighbor_social_proof = bool(re.search(r'(vecin|cuadra|manzana|al lado|don |do[nñ]a |aqu[ií] enfrente|calle)', text))
-    has_close_attempt = bool(re.search(r'(recibo|factura|compar|revis|hacer el cambio|enrol|registr|cambiarnos|apart|firm|contrat|cambio digital|paso a las|vemos a las|agend)', text))
-    has_flyer_surrender = bool(re.search(r'(tenga el folleto|tenga el volante|ah[ií] le dejo|ah[ií] viene mi n[uú]mero|le dejo la tarjeta|1-800)', text))
-    has_flyer_redirect = bool(re.search(r'(con gusto|con mucho gusto|se lo dejo pero|antes de dej[aá]rselo|para saber si vale la pena|para saber cu[aá]l|foll|volant)', text))
-    has_defensive_claim = bool(re.search(r'(no desconf[ií]e|soy honesto|no soy delincuente|c[aá]lmese|no se enoje)', text))
-    has_apology_respect = bool(re.search(r'(disculp|raz[oó]n|respet|permiso|buena tarde|no quise molestar|me retiro|con este calor|comet[ií] un error|mi error)', text))
-    has_season_pass = bool(re.search(r'(season pass|50%|cincuenta por ciento|descuento en verano|verano.*gratis|veranos gratis|julio y agosto|invierno|mitad)', text))
-    has_free_nights = bool(re.search(r'(noches gratis|free nights|8.*6|costo cero|gratis de noche|cargar|tesla|auto el[eé]ctrico|veh[ií]culo el[eé]ctrico|ev)', text))
-    has_cents_kwh = bool(re.search(r'(centavo|\d+\s*centavo|\d+\.\d+\s*centavo|kwh|efl|etiqueta|cr[eé]dito de \$30|clear deal|tarifa fija)', text))
-    has_oncor_guarantee = bool(re.search(r'(oncor|centerpoint|cables|postes|no hay corte|no se le va la luz|cero cortes|mismo cableado|distribuidora)', text))
-    has_decision_maker_probe = bool(re.search(r'(a qu[eé] hora llega|a qu[eé] hora est[aá]|titular|espos|pap[aá]|mam[aá]|qui[eé]n se encarga|regres|vuelvo|tarde|noche)', text))
-    has_attack_competitor = bool(re.search(r'(no sirve|p[eé]sim|obsolet|mentiros|chatarra|porquer[ií]a|robo|abus|se aprovechan)', text))
-    has_slamming_assurance = bool(re.search(r'(gafete|oficial|100 a[nñ]os|proteger|esi id|no le pido firmas|no le pido su recibo)', text))
-    has_store_gift_card = bool(re.search(r'(tarjeta|gift card|tarjeta de regalo|\$50|\$25|regalo|premio|ruleta)', text))
-    has_store_hurry_empathy = bool(re.search(r'(mandado|carrito|hielo|bolsas|s[uú]per|tienda|no le detengo|mientras camina|al coche|al auto|al estacionamiento|h-e-b|walmart|fiesta|kroger|home depot|costco)', text))
-    has_kiosk_trust = bool(re.search(r'(m[oó]dulo|kiosco|kiosko|oficial|aqu[ií] en la tienda|en pantalla|stand)', text))
+    # Detección bilingüe de patrones en contexto de energía eléctrica TXU
+    has_time_hook = bool(re.search(r'(15 segundo|15 second|r[aá]pido|quick|no le quito tiempo|not take.*time|solo un minuto|just a minute|un momento|one moment|de pasada|10 segundo|10 second|few seconds)', text))
+    has_pain_probe = bool(re.search(r'(cu[aá]nto paga|how much.*pay|recibo|bill|factura|cobro|charge|luz|electric|power|verano|summer|calor|heat|aire acondicionado|a/c|air condition|clima|subi[oó]|jump|spike|car[oa]|expensive|tarifa variable|variable rate|consum|usage)', text))
+    has_neighbor_social_proof = bool(re.search(r'(vecin|neighbor|cuadra|block|manzana|al lado|next door|don |do[nñ]a |aqu[ií] enfrente|across the street|calle|street)', text))
+    has_close_attempt = bool(re.search(r'(recibo|bill|factura|compar|compare|revis|review|hacer el cambio|switch|enrol|enroll|registr|sign up|cambiarnos|apart|firm|sign|contrat|contract|cambio digital|paso a las|see you at|vemos a las|agend|schedule)', text))
+    has_flyer_surrender = bool(re.search(r'(tenga el folleto|tenga el volante|take the flyer|ah[ií] le dejo|here is my card|ah[ií] viene mi n[uú]mero|le dejo la tarjeta|1-800)', text))
+    has_flyer_redirect = bool(re.search(r'(con gusto|gladly|happy to|con mucho gusto|se lo dejo pero|before i give you|antes de dej[aá]rselo|para saber si vale la pena|to know which one|para saber cu[aá]l|foll|flyer|brochure|volant)', text))
+    has_defensive_claim = bool(re.search(r'(no desconf[ií]e|don\'t distrust|soy honesto|i\'m honest|no soy delincuente|c[aá]lmese|calm down|no se enoje|don\'t get mad)', text))
+    has_apology_respect = bool(re.search(r'(disculp|apolog|sorry|raz[oó]n|you\'re right|respet|respect|permiso|buena tarde|good afternoon|no quise molestar|me retiro|con este calor|heat wave|comet[ií] un error|my mistake|my bad)', text))
+    has_season_pass = bool(re.search(r'(season pass|50%|cincuenta por ciento|fifty percent|descuento en verano|summer discount|verano.*gratis|free summer|veranos gratis|julio y agosto|july and august|invierno|winter|mitad|half off)', text))
+    has_free_nights = bool(re.search(r'(noches gratis|free nights|8.*6|costo cero|zero cost|gratis de noche|free at night|cargar|charge|tesla|auto el[eé]ctrico|electric vehicle|veh[ií]culo el[eé]ctrico|ev)', text))
+    has_cents_kwh = bool(re.search(r'(centavo|cent|\d+\s*cent|\d+\.\d+\s*cent|kwh|efl|etiqueta|electricity facts label|cr[eé]dito de \$30|\$30 credit|clear deal|tarifa fija|fixed rate)', text))
+    has_oncor_guarantee = bool(re.search(r'(oncor|centerpoint|cables|wires|postes|poles|no hay corte|no interruption|no se le va la luz|cero cortes|zero outage|mismo cableado|same wires|distribuidora|delivery)', text))
+    has_decision_maker_probe = bool(re.search(r'(a qu[eé] hora llega|what time.*home|a qu[eé] hora est[aá]|titular|account holder|decision maker|espos|husband|wife|spouse|pap[aá]|mam[aá]|qui[eé]n se encarga|who is in charge|regres|vuelvo|tarde|evening|noche|tonight)', text))
+    has_attack_competitor = bool(re.search(r'(no sirve|useless|p[eé]sim|terrible|obsolet|mentiros|liar|scam|chatarra|junk|porquer[ií]a|robo|ripoff|abus|se aprovechan)', text))
+    has_slamming_assurance = bool(re.search(r'(gafete|badge|oficial|official|100 a[nñ]os|100 years|proteger|protect|esi id|no le pido firmas|no signatures today|no le pido su recibo|not asking for bill)', text))
+    has_store_gift_card = bool(re.search(r'(tarjeta|gift card|tarjeta de regalo|\$50|\$25|regalo|reward|premio|ruleta)', text))
+    has_store_hurry_empathy = bool(re.search(r'(mandado|groceries|carrito|cart|hielo|ice|bolsas|bags|s[uú]per|store|tienda|no le detengo|won\'t hold you|mientras camina|as you walk|al coche|to your car|al auto|al estacionamiento|parking lot|h-e-b|walmart|fiesta|kroger|home depot|costco)', text))
+    has_kiosk_trust = bool(re.search(r'(m[oó]dulo|kiosk|kiosco|kiosko|oficial|official|aqu[ií] en la tienda|here in the store|en pantalla|on screen|stand|booth)', text))
     is_too_long = len(text) > 300
     is_store_encounter = door_state.get("encounter_type") == "STORE"
 
     # Detección de rapport humano, empatía, humor y preguntas abiertas (Flexibilidad conversacional con sustancia)
-    has_rapport_greeting = bool(re.search(r'(hola|buen[oa]s\s*(d[ií]as|tardes|noches)|qu[eé]\s*tal|c[oó]mo\s*(est[aá]|le\s*va|anda)|mucho\s*gusto|vecin[oa]|disculpe|calor[oó]n|qu[eé]\s*calor|tremendo\s*calor|vengo\s*pasando)', text))
-    has_open_question = bool(re.search(r'(\?|c[oó]mo\s*(le|ve|suele)|cu[aá]nto\s*(paga|le\s*llega)|qu[eé]\s*le\s*parece|le\s*gustar[ií]a|ha\s*(notado|tenido|visto)|usted\s*(suele|paga|tiene)|sabe\s*si|le\s*ha\s*tocado)', text))
-    has_empathy_reassurance = bool(re.search(r'(no\s*le\s*quito|no\s*se\s*preocupe|lo\s*entiendo|le\s*entiendo|tiene\s*raz[oó]n|a\s*todos\s*nos|s[eé]\s*que|tranquil[oa]|para\s*servirle|con\s*gusto|sin\s*compromiso|jaja|entiendo\s*perfectamente)', text))
+    has_rapport_greeting = bool(re.search(r'(hola|hello|hi|hey|good\s*(morning|afternoon|evening)|buen[oa]s\s*(d[ií]as|tardes|noches)|qu[eé]\s*tal|c[oó]mo\s*(est[aá]|le\s*va|anda)|how\s*are\s*you|how\'s\s*it\s*going|mucho\s*gusto|nice\s*to\s*meet|vecin[oa]|neighbor|disculpe|excuse\s*me|calor[oó]n|heat\s*wave|qu[eé]\s*calor|hot\s*outside|tremendo\s*calor|vengo\s*pasando|stopping\s*by)', text))
+    has_open_question = bool(re.search(r'(\?|how\s*(do|does|much|are)|what\s*(do|does|is)|c[oó]mo\s*(le|ve|suele)|cu[aá]nto\s*(paga|le\s*llega)|qu[eé]\s*le\s*parece|le\s*gustar[ií]a|would\s*you\s*like|ha\s*(notado|tenido|visto)|have\s*you\s*(noticed|seen)|usted\s*(suele|paga|tiene)|do\s*you\s*(usually|pay|have)|sabe\s*si|do\s*you\s*know\s*if|le\s*ha\s*tocado)', text))
+    has_empathy_reassurance = bool(re.search(r'(no\s*le\s*quito|won\'t\s*take|no\s*se\s*preocupe|don\'t\s*worry|lo\s*entiendo|i\s*understand|le\s*entiendo|tiene\s*raz[oó]n|you\'re\s*right|a\s*todos\s*nos|s[eé]\s*que|i\s*know|tranquil[oa]|para\s*servirle|con\s*gusto|my\s*pleasure|sin\s*compromiso|no\s*obligation|jaja|haha|entiendo\s*perfectamente|completely\s*understand)', text))
 
     words = [w for w in re.split(r'\s+', text) if w]
-    # Detección de saludos secos o monosílabos sin gancho comercial (ej. "hola", "buenas", "buenas tardes", "hola buenas tardes", "hey", "saludos", "disculpe")
-    is_bare_greeting = len(words) <= 4 and bool(re.search(r'^(hola\s+)?(hola|buen[oa]s(\s*(d[ií]as|tardes|noches))?|buen\s*d[ií]a|qu[eé]\s*tal|buenas|hey|saludos|disculpe)(\s*(vecin[oa]|se[ñn]or[a]?|caballero|joven))?[\.\!\?]*$', text))
+    # Detección de saludos secos o monosílabos sin gancho comercial (ej. "hola", "buenas", "buenas tardes", "hello", "hi")
+    is_bare_greeting = len(words) <= 4 and bool(re.search(r'^(hola\s+)?(hola|hello|hi|hey|good\s*(morning|afternoon|evening)|buen[oa]s(\s*(d[ií]as|tardes|noches))?|buen\s*d[ií]a|qu[eé]\s*tal|buenas|saludos|disculpe|excuse\s*me)(\s*(vecin[oa]|neighbor|se[ñn]or[a]?|sir|ma\'am|caballero|joven))?[\.\!\?]*$', text))
     is_meaningless_opening = is_opening_turn and len(words) <= 3 and not (has_pain_probe or has_season_pass or has_time_hook or has_open_question or has_close_attempt or has_cents_kwh or has_neighbor_social_proof or has_store_gift_card or has_store_hurry_empathy or has_kiosk_trust)
 
     has_natural_personality = (has_rapport_greeting or has_open_question or has_empathy_reassurance) and not (is_bare_greeting or is_meaningless_opening)
@@ -1627,6 +1742,15 @@ def evaluate_response_local(user_text, door_state):
         if not ("portazo" in reply.lower() or "cierra" in reply.lower()):
             reply = f"{reply} Ya no me interesa, gracias. [Cierra la puerta]"
 
+    if target_lang == "en":
+        reply, coach, new_suggestions = localize_local_output(
+            reply, coach, new_suggestions, target_lang, archetype,
+            is_bare_greeting=(is_bare_greeting or is_meaningless_opening),
+            is_store=is_store_encounter
+        )
+
+    engine_name = "Local Engine (Rules)" if target_lang == "en" else "Motor Local (Reglas)"
+
     # Agregar intercambios
     door_state["messages"].append({
         "sender": "user",
@@ -1641,19 +1765,19 @@ def evaluate_response_local(user_text, door_state):
         "coach": coach,
         "patience_change": patience_change,
         "interest_change": interest_change,
-        "engine": "Motor Local (Reglas)",
+        "engine": engine_name,
     })
 
     if new_suggestions and door_state["status"] == "IN_PROGRESS":
         door_state["suggestions"] = new_suggestions
 
     if door_state["status"] in ["SALE_CLOSED", "APPOINTMENT", "REJECTED"]:
-        door_state["analytics"] = compute_chat_analytics(door_state)
+        door_state["analytics"] = compute_chat_analytics(door_state, lang=target_lang)
 
     return door_state
 
 
-def evaluate_response(user_text, door_state):
+def evaluate_response(user_text, door_state, lang="es"):
     """
     Evalúa la respuesta del vendedor.
     Prioridad de procesamiento:
@@ -1661,15 +1785,17 @@ def evaluate_response(user_text, door_state):
     2. API directa de DeepSeek (si hay saldo y API key).
     3. Modelos gratuitos de OpenRouter.
     4. Motor heurístico local en memoria (fallback autónomo).
+    Soporta evaluación y respuestas bilingües ('es' o 'en').
     """
+    target_lang = (lang or door_state.get("language", "es")).lower()
     door_state["doorbell_rung"] = True
     llm_result = None
-    engine_name = "Motor Local (Reglas)"
+    engine_name = "Local Engine (Rules)" if target_lang == "en" else "Motor Local (Reglas)"
 
     # 1. Intentar con Google Gemini
     try:
         from .gemini_service import generate_gemini_response
-        llm_result = generate_gemini_response(user_text, door_state)
+        llm_result = generate_gemini_response(user_text, door_state, lang=target_lang)
         if llm_result:
             engine_name = llm_result.get("engine", "Google Gemini")
             print(f"[Simulator] Respondido por: {engine_name}")
@@ -1680,7 +1806,7 @@ def evaluate_response(user_text, door_state):
     if not llm_result:
         try:
             from .deepseek_service import generate_deepseek_response
-            llm_result = generate_deepseek_response(user_text, door_state)
+            llm_result = generate_deepseek_response(user_text, door_state, lang=target_lang)
             if llm_result:
                 engine_name = "DeepSeek (deepseek-chat)"
                 print(f"[Simulator] Respondido por: {engine_name}")
@@ -1691,7 +1817,7 @@ def evaluate_response(user_text, door_state):
     if not llm_result:
         try:
             from .openrouter_service import generate_llm_response
-            llm_result = generate_llm_response(user_text, door_state)
+            llm_result = generate_llm_response(user_text, door_state, lang=target_lang)
             if llm_result:
                 engine_name = "OpenRouter"
                 print(f"[Simulator] Respondido por: {engine_name}")
@@ -1727,10 +1853,10 @@ def evaluate_response(user_text, door_state):
             door_state["suggestions"] = llm_result["suggestions"]
 
         if door_state["status"] in ["SALE_CLOSED", "APPOINTMENT", "REJECTED"]:
-            door_state["analytics"] = compute_chat_analytics(door_state)
+            door_state["analytics"] = compute_chat_analytics(door_state, lang=target_lang)
 
         return door_state
 
     # 4. Fallback al motor local
-    print("[Simulator] Respondido por: Motor Local (Reglas)")
-    return evaluate_response_local(user_text, door_state)
+    print(f"[Simulator] Respondido por: {engine_name}")
+    return evaluate_response_local(user_text, door_state, lang=target_lang)

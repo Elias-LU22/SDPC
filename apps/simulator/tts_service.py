@@ -4,9 +4,15 @@ import hashlib
 import asyncio
 from django.conf import settings
 
-# Voces neuronales de alta fidelidad para el mercado hispano en Texas
-VOICE_MALE = "es-US-AlonsoNeural"
-VOICE_FEMALE = "es-US-PalomaNeural"
+# Voces neuronales de alta fidelidad para el mercado de Texas (Español e Inglés)
+VOICE_MALE_ES = "es-US-AlonsoNeural"
+VOICE_FEMALE_ES = "es-US-PalomaNeural"
+VOICE_MALE_EN = "en-US-GuyNeural"
+VOICE_FEMALE_EN = "en-US-JennyNeural"
+
+# Alias retrocompatibles
+VOICE_MALE = VOICE_MALE_ES
+VOICE_FEMALE = VOICE_FEMALE_ES
 
 # Directorio de caché local para evitar re-sintetizar frases idénticas
 CACHE_DIR = os.path.join(settings.BASE_DIR, "cache", "tts")
@@ -47,16 +53,23 @@ async def _synthesize_edge_tts_async(text, voice, output_path):
     await communicate.save(output_path)
 
 
-def synthesize_speech(text, gender="M", timeout=5):
+def synthesize_speech(text, gender="M", lang="es", timeout=5):
     """
-    Sintetiza el texto usando la voz neuronal de Microsoft correspondiente al género.
+    Sintetiza el texto usando la voz neuronal de Microsoft correspondiente al género e idioma.
     Devuelve los bytes de audio MP3 si se genera o existe en caché, o None en caso de fallo.
     """
     clean_text = clean_tts_text(text)
     if not clean_text or len(clean_text) < 2:
         return None
 
-    voice = VOICE_FEMALE if (gender or "").upper() == "F" else VOICE_MALE
+    is_female = (gender or "").upper() == "F"
+    is_english = (lang or "").lower().startswith("en")
+
+    if is_english:
+        voice = VOICE_FEMALE_EN if is_female else VOICE_MALE_EN
+    else:
+        voice = VOICE_FEMALE_ES if is_female else VOICE_MALE_ES
+
     cache_path = get_cache_path(voice, clean_text)
 
     # 1. Comprobar si ya existe en la caché local en disco

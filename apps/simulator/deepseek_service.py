@@ -95,37 +95,138 @@ def query_deepseek(messages, timeout=10):
     return None
 
 
-def generate_deepseek_response(user_text, door_state):
+def generate_deepseek_response(user_text, door_state, lang="es"):
     """
-    Genera la respuesta del prospecto y la evaluación del coach usando la API de DeepSeek.
+    Genera la respuesta del prospecto y la evaluación del coach usando la API de DeepSeek
+    en el idioma configurado (Español o Inglés).
     """
-    archetype_title = door_state.get('archetype_title', 'Residente')
+    active_lang = (lang or door_state.get('language', 'es')).lower()
+    is_english = active_lang.startswith('en')
+
+    archetype_title = door_state.get('archetype_title', 'Resident' if is_english else 'Residente')
     archetype_desc = door_state.get('archetype_description', '')
-    resident_name = door_state.get('resident_name', 'Residente')
-    resident_role = door_state.get('resident_role', 'Dueño de casa')
+    resident_name = door_state.get('resident_name', 'Resident' if is_english else 'Residente')
+    resident_role = door_state.get('resident_role', 'Homeowner' if is_english else 'Dueño de casa')
     patience = door_state.get('patience', 50)
     interest = door_state.get('interest', 20)
 
-    porch_obs = door_state.get('porch_observation', 'En la puerta de su casa observando al asesor.')
+    default_obs = 'At the front door observing the sales advisor.' if is_english else 'En la puerta de su casa observando al asesor.'
+    porch_obs = door_state.get('porch_observation', default_obs)
+
+    encounter_type = door_state.get('encounter_type', 'DOOR')
+    location_name = door_state.get('location_name', 'Texas')
 
     history_snippets = []
     for msg in door_state.get('messages', []):
-        sender = f"Residente ({resident_name})" if msg['sender'] == 'prospect' else "Vendedor en puerta"
+        if is_english:
+            sender = f"Customer ({resident_name})" if msg['sender'] == 'prospect' else ("Store Advisor" if encounter_type == 'STORE' else "Door Rep")
+        else:
+            sender = f"Cliente ({resident_name})" if msg['sender'] == 'prospect' else ("Asesor en tienda" if encounter_type == 'STORE' else "Vendedor en puerta")
         history_snippets.append(f"{sender}: {msg['text']}")
 
     conversation_history = "\n".join(history_snippets)
 
-    system_prompt = f"""ESTÁS EN EL ROL DE: {resident_name}, {resident_role}.
-LUGAR: Estás en tu casa en Texas. Un asesor comercial en puerta de TXU ENERGY acaba de tocar a tu puerta para ofrecerte planes de energía (Season Pass 50% de descuento en verano/invierno, Free Nights 8PM-6AM, Clear Deal y tarifa protegida).
+    if is_english:
+        if encounter_type == 'STORE':
+            lugar_context = (
+                f"LOCATION: You are at a retail store in Texas ({location_name}). "
+                f"You are entering to shop or heading out toward the parking lot with groceries. "
+                f"A commercial sales rep from TXU ENERGY (leading Texas electricity provider) at the official store kiosk "
+                f"approaches you to offer energy savings (Season Pass 50% discount in summer/winter, Free Nights 8PM-6AM, Clear Deal with bill credits, or store gift cards)."
+            )
+            observacion_label = f"What the sales rep observes about you: {porch_obs}"
+        else:
+            lugar_context = (
+                f"LOCATION: You are at your home in Texas ({location_name}). "
+                f"A door-to-door commercial rep from TXU ENERGY (leading Texas electricity provider) "
+                f"just knocked on your door to offer energy advice and plans "
+                f"(Season Pass 50% discount in summer/winter, Free Nights 8PM-6AM, Clear Deal bill credits, or protected fixed rates)."
+            )
+            observacion_label = f"What the sales rep observes at your door: {porch_obs}"
+
+        system_prompt = f"""YOU ARE IN THE ROLE OF: {resident_name}, {resident_role}.
+{lugar_context}
+
+VITAL IDENTITY RULES:
+1. YOU ARE THE CUSTOMER/RESIDENT ({resident_name}). YOU ARE NOT THE SALES REP.
+2. NEVER address the sales rep as "{resident_name}"; that is YOUR name. The sales rep is a stranger.
+3. NEVER pitch plans, appointments, or packages yourself. You only react as a customer: decide whether to stop and listen, ask about your bill, agree to switch, or walk away.
+4. PROSPECT PROFILE:
+   - Profile archetype: {archetype_title}
+   - Context/background: {archetype_desc}
+   - {observacion_label}
+   - Your current Patience: {patience}%
+   - Your current Interest: {interest}%
+
+SALES REP FLEXIBILITY & HUMAN RAPPORT:
+- Every sales rep has their own personality (polite humor, warm greeting, open diagnostic questions). Do NOT demand a rigid robot script.
+- If the rep is polite, makes a light relatable remark about Texas heat, or asks diagnostic questions, respond with natural human courtesy.
+- Do not decrease patience or interest for simple icebreakers or greetings. Only decrease patience if they are disrespectful, overly pushy, or deceptive.
+- If the rep builds trust and addresses your utility rate concerns, feel free to agree to enroll ('SALE_CLOSED') or book a follow-up appointment ('APPOINTMENT').
+- The sales coach must reward empathy, active listening, and natural human connection.
+5. ZERO EMOJIS: Strictly forbidden to use emojis in any part of your output.
+6. Your spoken customer reply ('reply') must be concise (1 to 2 sentences), natural, exactly as a real Texan customer would speak in English.
+
+STRICT JSON OUTPUT FORMAT:
+{{
+  "reply": "Your spoken English reply as {resident_name} (no emojis)",
+  "patience_change": integer between -15 and +15,
+  "interest_change": integer between -15 and +25,
+  "coach_critique": "Commercial sales coaching analysis in English evaluating rep technique (no emojis)",
+  "status": "IN_PROGRESS" | "SALE_CLOSED" | "APPOINTMENT" | "REJECTED",
+  "suggestions": [
+     "First tactical phrase in English the rep could say",
+     "Second tactical phrase in English the rep could say",
+     "Third tactical phrase in English the rep could say"
+  ]
+}}"""
+
+        is_opening_turn = len(door_state.get('messages', [])) == 0
+        if is_opening_turn:
+            user_prompt = (
+                f"INTERACTION START:\n"
+                f"The sales advisor approaches or greets you saying:\n"
+                f"\"{user_text}\"\n\n"
+                f"FIRST TURN INSTRUCTIONS:\n"
+                f"1. React realistically to their opening hook based on your archetype ({archetype_title}).\n"
+                f"2. In 'coach_critique', analyze the technical effectiveness of their opening (clarity, company intro, 15-second time frame, value proposition in English).\n"
+                f"3. In 'suggestions', provide 3 strong English tactical phrases to progress the conversation.\n"
+                f"Respond as {resident_name} in strict JSON format."
+            )
+        else:
+            user_prompt = (
+                f"CONVERSATION HISTORY:\n{conversation_history}\n\n"
+                f"THE SALES ADVISOR SAYS:\n\"{user_text}\"\n\n"
+                f"Respond as {resident_name} in strict JSON format."
+            )
+    else:
+        if encounter_type == 'STORE':
+            lugar_context = (
+                f"LUGAR: Estás en una tienda comercial en Texas ({location_name}). "
+                f"Vas entrando a hacer tus compras o vas saliendo hacia el estacionamiento con tu mandado. "
+                f"Un asesor comercial de TXU ENERGY en el kiosco oficial de la tienda se te acerca para ofrecerte ahorro de luz "
+                f"(Season Pass 50% de descuento en verano/invierno, Free Nights 8PM-6AM, Clear Deal con créditos en factura o tarjeta de regalo)."
+            )
+            observacion_label = f"Lo que el asesor nota en ti: {porch_obs}"
+        else:
+            lugar_context = (
+                f"LUGAR: Estás en tu casa en Texas ({location_name}). "
+                f"Un asesor comercial en puerta de TXU ENERGY acaba de tocar a tu puerta para ofrecerte planes de energía "
+                f"(Season Pass 50% de descuento en verano/invierno, Free Nights 8PM-6AM, Clear Deal y tarifa protegida)."
+            )
+            observacion_label = f"Observación visible en tu entrada: {porch_obs}"
+
+        system_prompt = f"""ESTÁS EN EL ROL DE: {resident_name}, {resident_role}.
+{lugar_context}
 
 REGLAS DE IDENTIDAD VITALES:
 1. TÚ ERES EL CLIENTE/RESIDENTE ({resident_name}). TÚ NO ERES EL ASESOR DE TXU.
-2. NUNCA le llames "{resident_name}" al vendedor; ese es TU nombre.
+2. NUNCA le llames "{resident_name}" al vendedor; ese es TU nombre. El vendedor es un desconocido.
 3. NUNCA OFREZCAS CITAS, NI PROPUESTAS, NI PAQUETES TÚ. Tú solo decides si escuchas, si muestras tu factura de luz, si compras o si cierras la puerta.
 4. PERFIL DEL PROSPECTO:
    - Tipo de residente: {archetype_title}
    - Contexto del hogar: {archetype_desc}
-   - Observación visible en tu entrada: {porch_obs}
+   - {observacion_label}
    - Tu Paciencia actual: {patience}%
    - Tu Interés actual: {interest}%
 
@@ -136,11 +237,11 @@ FLEXIBILIDAD Y PERSONALIDAD DEL VENDEDOR:
 - Acepta cerrar ('SALE_CLOSED') o agendar cita ('APPOINTMENT') cuando el vendedor genere confianza y aborde tus dudas de consumo.
 - El coach debe aplaudir el rapport y la autenticidad personal.
 5. CERO EMOJIS: Estrictamente prohibido usar emojis en todo el texto.
-6. Tu respuesta hablada ('reply') debe ser corta (1 a 2 oraciones), natural, como alguien hablando desde su puerta.
+6. Tu respuesta hablada ('reply') debe ser corta (1 a 2 oraciones), natural, como alguien hablando en su entorno.
 
 FORMATO DE SALIDA (ESTRICTAMENTE JSON):
 {{
-  "reply": "Tu respuesta hablada como {resident_name} en la puerta (sin emojis)",
+  "reply": "Tu respuesta hablada como {resident_name} (sin emojis)",
   "patience_change": entero entre -15 y +15,
   "interest_change": entero entre -15 y +25,
   "coach_critique": "Análisis del coach comercial evaluando la técnica del asesor de energía (sin emojis)",
@@ -152,20 +253,20 @@ FORMATO DE SALIDA (ESTRICTAMENTE JSON):
   ]
 }}"""
 
-    is_opening_turn = len(door_state.get('messages', [])) == 0
-    if is_opening_turn:
-        user_prompt = (
-            f"SITUACIÓN EN LA PUERTA:\n"
-            f"El timbre acaba de sonar en tu casa. Abres la puerta y el asesor comercial de TXU Energy te dice de inmediato como gancho de apertura:\n"
-            f"\"{user_text}\"\n\n"
-            f"INSTRUCCIONES PARA ESTE PRIMER TURNO:\n"
-            f"1. Abre la puerta y reacciona a su gancho de apertura según tu arquetipo ({archetype_title}).\n"
-            f"2. En 'coach_critique', evalúa específicamente la efectividad técnica del gancho de apertura inicial (empatía, claridad, gancho de tiempo, impacto en los primeros 15 segundos).\n"
-            f"3. En 'suggestions', sugiere 3 alternativas sólidas para continuar la conversación hacia la factura o el sondeo de necesidades.\n"
-            f"Responde como {resident_name} en formato JSON estricto."
-        )
-    else:
-        user_prompt = f"HISTORIAL EN LA PUERTA:\n{conversation_history}\n\nEL VENDEDOR EN PUERTA DICE:\n\"{user_text}\"\n\nResponde como {resident_name} (el cliente) en formato JSON estricto."
+        is_opening_turn = len(door_state.get('messages', [])) == 0
+        if is_opening_turn:
+            user_prompt = (
+                f"SITUACIÓN INICIAL:\n"
+                f"El asesor comercial de TXU Energy te dice de inmediato como gancho de apertura:\n"
+                f"\"{user_text}\"\n\n"
+                f"INSTRUCCIONES PARA ESTE PRIMER TURNO:\n"
+                f"1. Reacciona a su gancho de apertura según tu arquetipo ({archetype_title}).\n"
+                f"2. En 'coach_critique', evalúa específicamente la efectividad técnica del gancho de apertura inicial (empatía, claridad, gancho de tiempo, impacto en los primeros 15 segundos).\n"
+                f"3. En 'suggestions', sugiere 3 alternativas sólidas para continuar la conversación hacia la factura o el sondeo de necesidades.\n"
+                f"Responde como {resident_name} en formato JSON estricto."
+            )
+        else:
+            user_prompt = f"HISTORIAL:\n{conversation_history}\n\nEL ASESOR DICE:\n\"{user_text}\"\n\nResponde como {resident_name} (el cliente) en formato JSON estricto."
 
     messages = [
         {"role": "system", "content": system_prompt},

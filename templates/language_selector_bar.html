@@ -1,0 +1,16 @@
+<div id="language-selector-bar" {% if is_oob %}hx-swap-oob="true"{% endif %} class="flex items-center p-0.5 rounded-full bg-slate-200/70 dark:bg-white/5 border border-slate-300/60 dark:border-white/10 text-[11px] font-bold shadow-inner">
+    <form hx-post="{% url 'simulator:set_language' %}" hx-target="#chat-container" hx-swap="innerHTML" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="language" value="es">
+        <button type="submit" title="{{ t.lang_switch_es_title|default:'Cambiar a Español' }}" class="px-2 sm:px-2.5 py-1 rounded-full transition cursor-pointer {% if language == 'es' or not language %}bg-white dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-xs border border-slate-200/80 dark:border-teal-500/30{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white{% endif %}">
+            ES
+        </button>
+    </form>
+    <form hx-post="{% url 'simulator:set_language' %}" hx-target="#chat-container" hx-swap="innerHTML" class="inline">
+        {% csrf_token %}
+        <input type="hidden" name="language" value="en">
+        <button type="submit" title="{{ t.lang_switch_en_title|default:'Switch to English' }}" class="px-2 sm:px-2.5 py-1 rounded-full transition cursor-pointer {% if language == 'en' %}bg-white dark:bg-teal-500/20 text-teal-700 dark:text-teal-300 shadow-xs border border-slate-200/80 dark:border-teal-500/30{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white{% endif %}">
+            EN
+        </button>
+    </form>
+</div>

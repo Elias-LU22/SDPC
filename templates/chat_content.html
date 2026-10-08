@@ -1,10 +1,11 @@
 {% if request.headers.hx_request %}
-<!-- Sincronización Fuera de Banda (OOB) del Selector de Modo Superior -->
+<!-- Sincronización Fuera de Banda (OOB) del Selector de Modo y Selector de Idioma -->
 {% include 'mode_selector_bar.html' with is_oob=True %}
+{% include 'language_selector_bar.html' with is_oob=True %}
 {% endif %}
 
 <!-- Panel Principal de Simulación de Asesoría Comercial y Venta Directa - Liquid Glass Edition -->
-<div id="chat-card" data-resident="{{ door.resident_name }}" data-gender="{{ door.resident_gender }}" data-encounter="{{ door.encounter_type }}" class="flex flex-col h-full liquid-window rounded-none sm:rounded-3xl overflow-hidden border-0 sm:border">
+<div id="chat-card" data-resident="{{ door.resident_name }}" data-gender="{{ door.resident_gender }}" data-encounter="{{ door.encounter_type }}" data-lang="{{ language|default:'es' }}" class="flex flex-col h-full liquid-window rounded-none sm:rounded-3xl overflow-hidden border-0 sm:border">
 
     <!-- Encabezado de la Puerta o Tienda y Prospecto -->
     <header class="bg-white/60 dark:bg-slate-950/40 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/5 px-3 sm:px-6 py-2 sm:py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4 flex-shrink-0">
@@ -56,9 +57,9 @@
                         <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        <span>Paciencia</span>
+                        <span>{{ t.metric_patience }}</span>
                         {% if door.patience < 25 %}
-                            <span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse ml-0.5 whitespace-nowrap">¡Riesgo!</span>
+                            <span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 animate-pulse ml-0.5 whitespace-nowrap">{{ t.alert_rejection_risk }}</span>
                         {% endif %}
                     </span>
                     <span class="font-mono font-bold text-xs {% if door.patience >= 60 %}text-teal-600 dark:text-teal-400{% elif door.patience >= 25 %}text-amber-500 dark:text-amber-400{% else %}text-rose-600 dark:text-rose-400{% endif %}">
@@ -77,9 +78,9 @@
                         <svg class="w-3.5 h-3.5 {% if door.interest >= 70 %}text-emerald-500 dark:text-emerald-400{% elif door.interest >= 35 %}text-teal-600 dark:text-teal-400{% else %}text-amber-500 dark:text-amber-400{% endif %}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                         </svg>
-                        <span>Interés</span>
+                        <span>{{ t.metric_interest }}</span>
                         {% if door.interest >= 70 %}
-                            <span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 animate-pulse ml-0.5 whitespace-nowrap">¡Cierre!</span>
+                            <span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 animate-pulse ml-0.5 whitespace-nowrap">{{ t.alert_closing_opportunity }}</span>
                         {% endif %}
                     </span>
                     <span class="font-mono font-bold text-xs {% if door.interest >= 70 %}text-emerald-600 dark:text-emerald-400{% elif door.interest >= 35 %}text-teal-600 dark:text-teal-400{% else %}text-amber-500 dark:text-amber-400{% endif %}">
@@ -95,18 +96,18 @@
             <div class="flex items-center gap-2">
                 <form hx-post="{% url 'simulator:reset_chat' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST">
                     {% csrf_token %}
-                    <button type="submit" title="Reiniciar diálogo con este prospecto" class="liquid-pill px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition flex items-center gap-1.5">
+                    <button type="submit" title="{{ t.btn_reset_chat_title }}" class="liquid-pill px-3 py-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition flex items-center gap-1.5">
                         <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                         </svg>
-                        <span>Reiniciar</span>
+                        <span>{{ t.btn_reset_chat }}</span>
                     </button>
                 </form>
 
                 <form hx-post="{% url 'simulator:next_door' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST">
                     {% csrf_token %}
-                    <button type="submit" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white text-xs font-semibold shadow-md shadow-teal-600/30 border border-white/20 transition-all duration-200 transform hover:-translate-y-0.5 flex items-center gap-1.5">
-                        <span>{% if door.encounter_type == 'STORE' %}Siguiente Cliente{% else %}Siguiente Puerta{% endif %}</span>
+                    <button type="submit" title="{{ t.btn_next_title }}" class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white text-xs font-semibold shadow-md shadow-teal-600/30 border border-white/20 transition-all duration-200 transform hover:-translate-y-0.5 flex items-center gap-1.5">
+                        <span>{% if door.encounter_type == 'STORE' %}{{ t.btn_next_shopper }}{% else %}{{ t.btn_next_door }}{% endif %}</span>
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                         </svg>
@@ -118,11 +119,10 @@
 
     <!-- Barra del Intercomunicador de Voz en Vivo -->
     <div class="bg-slate-100/70 dark:bg-slate-950/50 backdrop-blur-md border-b border-slate-200/70 dark:border-white/5 px-3 sm:px-6 py-1.5 sm:py-2 flex flex-wrap items-center justify-between gap-2 sm:gap-3 flex-shrink-0 text-xs">
-        <div class="flex items-center gap-2 sm:gap-3">
-            <!-- Indicador de Estado y Visualizador de Ondas -->
+        <div class="flex items-center gap-2 sm:            <!-- Indicador de Estado y Visualizador de Ondas -->
             <div class="flex items-center gap-2">
                 <span id="intercom-status-dot" class="w-2.5 h-2.5 rounded-full bg-teal-500 dark:bg-teal-400"></span>
-                <span id="intercom-status-text" class="font-medium text-slate-700 dark:text-slate-200">Voz Activa: Listo</span>
+                <span id="intercom-status-text" class="font-medium text-slate-700 dark:text-slate-200">{{ t.intercom_ready }}</span>
             </div>
 
             <!-- Visualizador de Ondas Sonoras -->
@@ -138,16 +138,16 @@
         <!-- Controles Rápidos de Voz -->
         <div class="flex items-center gap-1.5 sm:gap-2">
             <!-- Conmutar Manos Libres -->
-            <button type="button" id="toggle-handsfree-btn" onclick="VoiceIntercom.toggleHandsFree()" title="Conversación continua automática" class="liquid-pill px-2.5 sm:px-3 py-1.5 rounded-full text-teal-700 dark:text-teal-300 border-teal-500/30 bg-teal-500/10 dark:bg-teal-950/40 text-xs font-medium">
-                Manos Libres: Activo
+            <button type="button" id="toggle-handsfree-btn" onclick="VoiceIntercom.toggleHandsFree()" title="{{ t.intercom_handsfree_title }}" class="liquid-pill px-2.5 sm:px-3 py-1.5 rounded-full text-teal-700 dark:text-teal-300 border-teal-500/30 bg-teal-500/10 dark:bg-teal-950/40 text-xs font-medium">
+                {{ t.intercom_handsfree_active }}
             </button>
 
             <!-- Conmutar Silencio de Audio -->
-            <button type="button" id="toggle-mute-btn" onclick="VoiceIntercom.toggleMute()" title="Silenciar o activar la voz del residente o comprador" class="liquid-pill px-2.5 sm:px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs">
+            <button type="button" id="toggle-mute-btn" onclick="VoiceIntercom.toggleMute()" title="{{ t.intercom_mute_title }}" class="liquid-pill px-2.5 sm:px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs">
                 <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
                 </svg>
-                <span>Voz Activa</span>
+                <span>{{ t.intercom_voice_active }}</span>
             </button>
         </div>
     </div>
@@ -169,9 +169,9 @@
                     </div>
                     <div class="space-y-1">
                         <span class="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
-                            Kiosco en Tienda • {{ door.location_name }}
+                            {{ t.arrival_store_badge }} • {{ door.location_name }}
                         </span>
-                        <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Estás en la tienda viendo pasar a {{ door.resident_name }}</h2>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{{ t.arrival_store_heading_prefix }} {{ door.resident_name }}</h2>
                     </div>
                     <div class="p-3.5 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/5 text-left text-xs space-y-1.5">
                         <div class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
@@ -179,19 +179,19 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                             </svg>
-                            <span>Observación del comprador:</span>
+                            <span>{{ t.observation_shopper_label }}</span>
                         </div>
                         <p class="text-slate-600 dark:text-slate-400 italic">{{ door.porch_observation }}</p>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        Aborda al comprador mientras camina hacia la salida o estacionamiento. Tu micrófono se encenderá automáticamente para que lances tu gancho de abordaje.
+                        {{ t.arrival_store_desc }}
                     </p>
                     <div class="pt-2">
                         <button type="button" hx-post="{% url 'simulator:ring_doorbell' %}" hx-target="#chat-container" hx-swap="innerHTML" onclick="VoiceIntercom.approachAndStart()" class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-bold text-sm shadow-lg shadow-teal-500/20 border border-teal-300/30 transition-all duration-200 transform hover:-translate-y-0.5 inline-flex items-center justify-center gap-2">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                             </svg>
-                            <span>Abordar Comprador para Iniciar</span>
+                            <span>{{ t.arrival_store_btn }}</span>
                         </button>
                     </div>
                 </div>
@@ -206,9 +206,9 @@
                     </div>
                     <div class="space-y-1">
                         <span class="text-[11px] font-mono font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
-                            Llegada al pórtico • Puerta #{{ door.door_number }}
+                            {{ t.arrival_porch_badge_prefix }}{{ door.door_number }}
                         </span>
-                        <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">Estás frente a la residencia de {{ door.resident_name }}</h2>
+                        <h2 class="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{{ t.arrival_porch_heading_prefix }} {{ door.resident_name }}</h2>
                     </div>
                     <div class="p-3.5 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/5 text-left text-xs space-y-1.5">
                         <div class="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
@@ -216,19 +216,19 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                             </svg>
-                            <span>Observación en la entrada:</span>
+                            <span>{{ t.observation_porch_label }}</span>
                         </div>
                         <p class="text-slate-600 dark:text-slate-400 italic">{{ door.porch_observation }}</p>
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                        Toca el timbre para avisar al residente. Tu micrófono se encenderá automáticamente y tú hablarás primero con tu gancho de apertura o rompehielos.
+                        {{ t.arrival_porch_desc }}
                     </p>
                     <div class="pt-2">
                         <button type="button" hx-post="{% url 'simulator:ring_doorbell' %}" hx-target="#chat-container" hx-swap="innerHTML" onclick="VoiceIntercom.ringAndStart()" class="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-sm shadow-lg shadow-amber-500/20 border border-amber-300/30 transition-all duration-200 transform hover:-translate-y-0.5 inline-flex items-center justify-center gap-2">
                             <svg class="w-5 h-5 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                             </svg>
-                            <span>Tocar Timbre para Iniciar</span>
+                            <span>{{ t.arrival_porch_btn }}</span>
                         </button>
                     </div>
                 </div>
@@ -242,10 +242,10 @@
                 </div>
                 <div class="space-y-1">
                     <div class="text-xs font-bold text-teal-700 dark:text-teal-300">
-                        {% if door.encounter_type == 'STORE' %}Abordaje en Vivo • Micrófono Activo{% else %}Timbre Activado • Micrófono en Vivo{% endif %}
+                        {% if door.encounter_type == 'STORE' %}{{ t.waiting_store_title }}{% else %}{{ t.waiting_door_title }}{% endif %}
                     </div>
                     <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-                        {% if door.encounter_type == 'STORE' %}El comprador te está mirando. Habla ahora por el micrófono o envía tu gancho de abordaje.{% else %}El residente se acerca a la puerta. Habla ahora por el micrófono o envía tu gancho de apertura.{% endif %}
+                        {% if door.encounter_type == 'STORE' %}{{ t.waiting_store_desc }}{% else %}{{ t.waiting_door_desc }}{% endif %}
                     </p>
                 </div>
             </div>
@@ -263,8 +263,8 @@
                     <div class="space-y-2 flex-1">
                         <div class="flex items-center gap-2">
                             <span class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ door.resident_name }}</span>
-                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5">Residente</span>
-                            <button type="button" onclick="VoiceIntercom.speak('{{ msg.text|escapejs }}', '{{ door.resident_gender }}', true)" title="Escuchar respuesta en voz alta" class="text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 transition p-1 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/5">
+                            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/5">{{ door.resident_role }}</span>
+                            <button type="button" onclick="VoiceIntercom.speak('{{ msg.text|escapejs }}', '{{ door.resident_gender }}', true)" title="{{ t.speaker_listen_tooltip }}" class="text-slate-400 hover:text-teal-600 dark:hover:text-teal-300 transition p-1 rounded-lg hover:bg-slate-200/50 dark:hover:bg-white/5">
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.536 8.464a5 5 0 010 7.072M12 6v12l-4-4H4V10h4l4-4z"/>
                                 </svg>
@@ -282,7 +282,7 @@
                                         <svg class="w-4 h-4 text-teal-600 dark:text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                         </svg>
-                                        <span class="tracking-tight font-bold">Análisis del Coach Comercial</span>
+                                        <span class="tracking-tight font-bold">{{ t.coach_title }}</span>
                                         {% if msg.engine %}
                                             <span class="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
                                                 {{ msg.engine }}
@@ -292,12 +292,12 @@
                                     <div class="flex items-center gap-2 font-mono text-[11px]">
                                         {% if msg.interest_change != 0 %}
                                             <span class="px-2 py-0.5 rounded-full {% if msg.interest_change > 0 %}bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300{% else %}bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300{% endif %}">
-                                                {% if msg.interest_change > 0 %}+{% endif %}{{ msg.interest_change }}% Interés
+                                                {% if msg.interest_change > 0 %}+{% endif %}{{ msg.interest_change }}% {{ t.metric_interest }}
                                             </span>
                                         {% endif %}
                                         {% if msg.patience_change != 0 %}
                                             <span class="px-2 py-0.5 rounded-full {% if msg.patience_change > 0 %}bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300{% else %}bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300{% endif %}">
-                                                {% if msg.patience_change > 0 %}+{% endif %}{{ msg.patience_change }}% Paciencia
+                                                {% if msg.patience_change > 0 %}+{% endif %}{{ msg.patience_change }}% {{ t.metric_patience }}
                                             </span>
                                         {% endif %}
                                     </div>
@@ -312,7 +312,7 @@
                 <!-- Mensaje del Vendedor (Derecha) -->
                 <div class="flex items-start justify-end space-x-3 max-w-2xl ml-auto {% if forloop.last %}animate-fade-in{% endif %}">
                     <div class="space-y-1.5 text-right">
-                        <span class="text-[11px] font-semibold tracking-wide text-teal-600 dark:text-teal-400">Tú (Asesor de Energía TXU)</span>
+                        <span class="text-[11px] font-semibold tracking-wide text-teal-600 dark:text-teal-400">{{ t.sender_advisor }}</span>
                         <div class="liquid-card-user text-white p-4 rounded-3xl rounded-tr-sm text-sm leading-relaxed shadow-md text-left">
                             {{ msg.text }}
                         </div>
@@ -341,16 +341,16 @@
                             </span>
                         </div>
                         <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                            Informe Analítico de Desempeño Comercial
+                            {{ t.analytics_summary_title }}
                         </h2>
                         <p class="text-xs text-slate-600 dark:text-slate-400">
-                            Evaluación objetiva de competencias en diálogo con <strong class="text-slate-800 dark:text-slate-200">{{ door.resident_name }}</strong> ({{ door.archetype_title }}).
+                            {{ t.analytics_evaluation_prefix }} <strong class="text-slate-800 dark:text-slate-200">{{ door.resident_name }}</strong> ({{ door.archetype_title }}).
                         </p>
                     </div>
 
                     <!-- Calificación Global -->
                     <div class="flex-shrink-0 text-center px-4 py-2.5 rounded-2xl bg-gradient-to-br from-teal-500/10 to-teal-500/20 border border-teal-500/30 shadow-inner">
-                        <div class="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300">Puntaje Global</div>
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300">{{ t.analytics_score_label }}</div>
                         <div class="text-3xl font-extrabold font-mono text-teal-700 dark:text-teal-200">{{ door.analytics.overall_score }}<span class="text-xs text-teal-600/70 dark:text-teal-400 font-normal">/100</span></div>
                     </div>
                 </div>
@@ -361,7 +361,7 @@
                         <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                         </svg>
-                        <span>Evaluación de Competencias Clave</span>
+                        <span>{{ t.analytics_competencies_title }}</span>
                     </h3>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -392,7 +392,7 @@
                             <svg class="w-4 h-4 text-teal-600 dark:text-teal-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
-                            <span>Fortalezas Demostradas</span>
+                            <span>{{ t.analytics_strengths_title }}</span>
                         </div>
                         <ul class="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
                             {% for strength in door.analytics.strengths %}
@@ -410,7 +410,7 @@
                             <svg class="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
                             </svg>
-                            <span>Áreas de Mejora Prioritarias</span>
+                            <span>{{ t.analytics_improvements_title }}</span>
                         </div>
                         <ul class="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
                             {% for area in door.analytics.areas_for_improvement %}
@@ -426,19 +426,19 @@
                 <!-- Métricas de la Sesión -->
                 <div class="p-3.5 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 text-xs">
                     <div class="flex items-center gap-1.5">
-                        <span class="text-slate-500 dark:text-slate-400">Intercambios:</span>
+                        <span class="text-slate-500 dark:text-slate-400">{{ t.analytics_metric_turns }}:</span>
                         <strong class="font-mono text-slate-800 dark:text-slate-200">{{ door.analytics.metrics.turns }}</strong>
                     </div>
                     <div class="flex items-center gap-1.5">
-                        <span class="text-slate-500 dark:text-slate-400">Variación Interés:</span>
+                        <span class="text-slate-500 dark:text-slate-400">{{ t.analytics_metric_interest_delta }}:</span>
                         <strong class="font-mono text-teal-600 dark:text-teal-400">{{ door.analytics.metrics.interest_delta_str }}</strong>
                     </div>
                     <div class="flex items-center gap-1.5">
-                        <span class="text-slate-500 dark:text-slate-400">Variación Paciencia:</span>
+                        <span class="text-slate-500 dark:text-slate-400">{{ t.analytics_metric_patience_delta }}:</span>
                         <strong class="font-mono text-amber-600 dark:text-amber-400">{{ door.analytics.metrics.patience_delta_str }}</strong>
                     </div>
                     <div class="flex items-center gap-1.5">
-                        <span class="text-slate-500 dark:text-slate-400">Interés Final:</span>
+                        <span class="text-slate-500 dark:text-slate-400">{{ t.analytics_metric_final_interest }}:</span>
                         <strong class="font-mono text-teal-600 dark:text-teal-400">{{ door.analytics.metrics.final_interest }}%</strong>
                     </div>
                 </div>
@@ -451,14 +451,14 @@
                             <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                             </svg>
-                            <span>Practicar de Nuevo con este Prospecto</span>
+                            <span>{{ t.analytics_btn_retry }}</span>
                         </button>
                     </form>
 
                     <form hx-post="{% url 'simulator:next_door' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST">
                         {% csrf_token %}
                         <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-semibold text-xs shadow-md shadow-teal-600/30 border border-white/20 transition-all duration-200 transform hover:-translate-y-0.5 flex items-center gap-2">
-                            <span>{% if door.encounter_type == 'STORE' %}Continuar al Siguiente Cliente{% else %}Continuar a la Siguiente Puerta{% endif %}</span>
+                            <span>{% if door.encounter_type == 'STORE' %}{{ t.analytics_btn_continue_shopper }}{% else %}{{ t.analytics_btn_continue_door }}{% endif %}</span>
                             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
@@ -473,14 +473,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
-                <div class="text-teal-700 dark:text-teal-300 font-bold text-base tracking-tight">Venta Cerrada con Éxito</div>
+                <div class="text-teal-700 dark:text-teal-300 font-bold text-base tracking-tight">{{ t.status_closed_title }}</div>
                 <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                    Lograste conectar con la necesidad del residente, superaste las dudas sobre su tarifa de luz y aseguraste el registro del plan TXU Energy.
+                    {{ t.status_closed_desc }}
                 </p>
                 <form hx-post="{% url 'simulator:next_door' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" class="pt-2">
                     {% csrf_token %}
                     <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-semibold text-xs shadow-md shadow-teal-600/30 border border-white/20 transition-all duration-200 transform hover:-translate-y-0.5">
-                        {% if door.encounter_type == 'STORE' %}Continuar al siguiente comprador{% else %}Continuar a la siguiente casa{% endif %}
+                        {% if door.encounter_type == 'STORE' %}{{ t.btn_next_shopper }}{% else %}{{ t.btn_next_door }}{% endif %}
                     </button>
                 </form>
             </div>
@@ -491,14 +491,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </div>
-                <div class="text-cyan-700 dark:text-cyan-300 font-bold text-base tracking-tight">Cita Comercial Asegurada</div>
+                <div class="text-cyan-700 dark:text-cyan-300 font-bold text-base tracking-tight">{{ t.status_apt_title }}</div>
                 <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                    Estableciste un horario formal para revisar la factura de luz completa con los tomadores de decisión.
+                    {{ t.status_apt_desc }}
                 </p>
                 <form hx-post="{% url 'simulator:next_door' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" class="pt-2">
                     {% csrf_token %}
                     <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-500 hover:to-cyan-500 text-white font-semibold text-xs shadow-md shadow-teal-600/30 border border-white/20 transition-all duration-200 transform hover:-translate-y-0.5">
-                        {% if door.encounter_type == 'STORE' %}Continuar al siguiente comprador{% else %}Continuar a la siguiente casa{% endif %}
+                        {% if door.encounter_type == 'STORE' %}{{ t.btn_next_shopper }}{% else %}{{ t.btn_next_door }}{% endif %}
                     </button>
                 </form>
             </div>
@@ -509,14 +509,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
-                <div class="text-rose-700 dark:text-rose-300 font-bold text-base tracking-tight">Contacto Concluido</div>
+                <div class="text-rose-700 dark:text-rose-300 font-bold text-base tracking-tight">{{ t.status_rejected_title }}</div>
                 <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                    El prospecto concluyó el contacto. En venta directa el rechazo es parte natural del proceso. Aplica el aprendizaje en la próxima oportunidad.
+                    {{ t.status_rejected_desc }}
                 </p>
                 <form hx-post="{% url 'simulator:next_door' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" class="pt-2">
                     {% csrf_token %}
                     <button type="submit" class="liquid-pill px-5 py-2.5 rounded-xl text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white font-semibold text-xs transition">
-                        {% if door.encounter_type == 'STORE' %}Pasar al siguiente comprador{% else %}Pasar a la siguiente puerta{% endif %}
+                        {% if door.encounter_type == 'STORE' %}{{ t.btn_next_shopper }}{% else %}{{ t.btn_next_door }}{% endif %}
                     </button>
                 </form>
             </div>
@@ -534,11 +534,11 @@
                 <!-- Botón Pistas Tácticas (Popover Desplegable para evitar trampas) -->
                 {% if door.suggestions %}
                     <div class="relative">
-                        <button type="button" id="btn-toggle-hints" onclick="toggleHintsMenu()" title="Ver u ocultar sugerencias tácticas" class="liquid-pill px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-200 hover:text-teal-700 dark:hover:text-teal-300 text-xs font-semibold transition flex items-center gap-2 border border-teal-500/20 hover:border-teal-500/40">
+                        <button type="button" id="btn-toggle-hints" onclick="toggleHintsMenu()" title="{{ t.hints_toggle_title }}" class="liquid-pill px-3 py-1.5 rounded-xl text-slate-700 dark:text-slate-200 hover:text-teal-700 dark:hover:text-teal-300 text-xs font-semibold transition flex items-center gap-2 border border-teal-500/20 hover:border-teal-500/40">
                             <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                             </svg>
-                            <span>Pistas</span>
+                            <span>{{ t.hints_btn }}</span>
                             <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20">
                                 {{ door.suggestions|length }}
                             </span>
@@ -555,7 +555,7 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                     </svg>
                                     <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
-                                        {% if not door.messages %}{% if door.encounter_type == 'STORE' %}Ganchos de abordaje{% else %}Ganchos de apertura{% endif %}{% else %}Pistas tácticas recomendadas{% endif %}
+                                        {% if not door.messages %}{% if door.encounter_type == 'STORE' %}{{ t.hints_title_approach }}{% else %}{{ t.hints_title_hooks }}{% endif %}{% else %}{{ t.hints_title_tactics }}{% endif %}
                                     </span>
                                 </div>
                                 <button type="button" onclick="toggleHintsMenu(false)" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 rounded-lg">
@@ -565,7 +565,7 @@
                                 </button>
                             </div>
                             <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">
-                                Haz clic en una sugerencia para enviarla directamente o utilízala como guía para tu respuesta:
+                                {{ t.hints_desc }}
                             </p>
                             <div class="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pt-1">
                                 {% for sugg in door.suggestions %}
@@ -590,11 +590,11 @@
                 <!-- Botón Concluir y Evaluar -->
                 <form hx-post="{% url 'simulator:finish_chat' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST" class="inline">
                     {% csrf_token %}
-                    <button type="submit" title="Finalizar interacción actual y generar reporte analítico de desempeño" class="liquid-pill px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition flex items-center gap-1.5">
+                    <button type="submit" title="{{ t.btn_evaluate_title }}" class="liquid-pill px-3 py-1.5 rounded-xl text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs font-medium transition flex items-center gap-1.5">
                         <svg class="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
                         </svg>
-                        <span>Concluir y Evaluar</span>
+                        <span>{{ t.btn_evaluate }}</span>
                     </button>
                 </form>
             </div>
@@ -604,7 +604,7 @@
                 {% csrf_token %}
 
                 <!-- Botón de Micrófono de Voz -->
-                <button type="button" id="voice-mic-btn" onclick="VoiceIntercom.toggleListening()" title="Activar micrófono para hablar" class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl liquid-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center flex-shrink-0 transition">
+                <button type="button" id="voice-mic-btn" onclick="VoiceIntercom.toggleListening()" title="{{ t.mic_btn_title }}" class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl liquid-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center flex-shrink-0 transition">
                     <!-- Icono Micrófono Inactivo -->
                     <svg id="icon-mic-normal" class="w-5 h-5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
@@ -617,10 +617,10 @@
                 </button>
 
                 <div class="relative flex-1">
-                    <input type="text" id="message-input" name="message" required autocomplete="off" placeholder="{% if not door.messages %}{% if door.encounter_type == 'STORE' %}Aborda al comprador o escribe tu gancho...{% else %}Toca el timbre o escribe tu gancho de apertura...{% endif %}{% else %}Hable por el micrófono o escriba con su propio estilo y palabras...{% endif %}" class="liquid-input w-full rounded-2xl px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <input type="text" id="message-input" name="message" required autocomplete="off" placeholder="{% if not door.messages %}{% if door.encounter_type == 'STORE' %}{{ t.input_placeholder_initial_store }}{% else %}{{ t.input_placeholder_initial_door }}{% endif %}{% else %}{{ t.input_placeholder_active }}{% endif %}" class="liquid-input w-full rounded-2xl px-3.5 sm:px-5 py-2.5 sm:py-3 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed">
                 </div>
                 <button type="submit" id="send-button" class="px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-2xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-medium text-xs sm:text-sm transition-all duration-200 shadow-md shadow-teal-600/30 border border-white/20 flex items-center gap-1.5 sm:gap-2 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transform hover:-translate-y-0.5 active:translate-y-0">
-                    <span id="send-button-text">Enviar</span>
+                    <span id="send-button-text">{{ t.btn_send }}</span>
                     <svg id="send-button-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
                     </svg>
@@ -629,12 +629,12 @@
         {% else %}
             <div class="flex flex-col sm:flex-row items-center justify-between gap-3 py-1">
                 <span class="text-xs text-slate-500 dark:text-slate-400 font-medium text-center sm:text-left">
-                    Interacción finalizada. Revisa el informe analítico de desempeño superior antes de continuar.
+                    {{ t.session_completed_notice }}
                 </span>
                 <form hx-post="{% url 'simulator:next_door' %}" hx-target="#chat-container" hx-swap="innerHTML" method="POST">
                     {% csrf_token %}
                     <button type="submit" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-400 hover:to-teal-500 text-white font-semibold text-xs shadow-md shadow-teal-600/30 border border-white/20 inline-flex items-center gap-2 transform hover:-translate-y-0.5 transition">
-                        <span>{% if door.encounter_type == 'STORE' %}Abordar Siguiente Comprador{% else %}Siguiente Puerta{% endif %}</span>
+                        <span>{% if door.encounter_type == 'STORE' %}{{ t.btn_next_shopper }}{% else %}{{ t.btn_next_door }}{% endif %}</span>
                         <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                         </svg>

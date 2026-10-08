@@ -254,14 +254,66 @@ const VoiceIntercom = (function() {
         return name.includes('natural') || name.includes('neural') || name.includes('online') || name.includes('google') || name.includes('enhanced');
     }
 
-    // Seleccionar voz en español acorde al género del prospecto, priorizando motores neuronales
+    function getAppLanguage() {
+        const card = document.getElementById('chat-card');
+        if (card && card.getAttribute('data-lang')) {
+            return card.getAttribute('data-lang').toLowerCase().startsWith('en') ? 'en' : 'es';
+        }
+        const container = document.getElementById('chat-container');
+        if (container && container.getAttribute('data-lang')) {
+            return container.getAttribute('data-lang').toLowerCase().startsWith('en') ? 'en' : 'es';
+        }
+        const htmlLang = (document.documentElement.lang || 'es').toLowerCase();
+        return htmlLang.startsWith('en') ? 'en' : 'es';
+    }
+
+    function getLocalizedStatus(key, isFemale) {
+        const lang = getAppLanguage();
+        if (lang === 'en') {
+            const role = isFemale ? 'Customer (Female Voice)' : 'Customer (Male Voice)';
+            switch (key) {
+                case 'preparing': return `${role} preparing audio...`;
+                case 'speaking': return `${role} speaking...`;
+                case 'listening': return 'Listening to you (Speak now)...';
+                case 'ready': return 'Ready to speak (Your turn)...';
+                case 'sending': return 'Sending proposal to Gemini...';
+                case 'mic_paused': return 'Microphone paused';
+                case 'voice_muted': return 'Voice Muted';
+                case 'voice_active': return 'Voice Active';
+                default: return '';
+            }
+        } else {
+            const role = isFemale ? 'Residente (Voz Femenina)' : 'Residente (Voz Masculina)';
+            switch (key) {
+                case 'preparing': return `${role} preparando audio...`;
+                case 'speaking': return `${role} hablando...`;
+                case 'listening': return 'Escuchándote (Hable ahora)...';
+                case 'ready': return 'Listo para hablar (Tu turno)...';
+                case 'sending': return 'Enviando propuesta a Gemini...';
+                case 'mic_paused': return 'Micrófono en pausa';
+                case 'voice_muted': return 'Voz Silenciada';
+                case 'voice_active': return 'Voz Activa';
+                default: return '';
+            }
+        }
+    }
+
+    // Seleccionar voz acorde al idioma y género del prospecto, priorizando motores neuronales
     function selectVoice(gender) {
         if (!availableVoices || availableVoices.length === 0) {
             loadVoices();
         }
 
-        const spanishVoices = (availableVoices || []).filter(v => v.lang && (v.lang.startsWith('es') || v.lang.includes('ES')));
-        if (spanishVoices.length === 0) {
+        const lang = getAppLanguage();
+        const isEnglish = (lang === 'en');
+        const langVoices = (availableVoices || []).filter(v => {
+            if (!v.lang) return false;
+            return isEnglish
+                ? (v.lang.startsWith('en') || v.lang.includes('EN'))
+                : (v.lang.startsWith('es') || v.lang.includes('ES'));
+        });
+
+        if (langVoices.length === 0) {
             return {
                 voice: availableVoices && availableVoices.length > 0 ? availableVoices[0] : null,
                 isExplicitGender: false
@@ -270,14 +322,18 @@ const VoiceIntercom = (function() {
 
         const isFemale = (gender || '').toUpperCase() === 'F';
 
-        const femaleKeywords = [
+        const femaleKeywords = isEnglish ? [
+            'female', 'jenny', 'zira', 'samantha', 'aria', 'ava', 'emma', 'olivia', 'victoria', 'karen', 'cathy', 'susan', 'linda'
+        ] : [
             'female', 'mujer', 'paulina', 'monica', 'sabina', 'helena', 'laura', 'lucia',
             'elena', 'sofia', 'paloma', 'hilda', 'dalia', 'elvira', 'angela', 'angelica',
             'carmen', 'valeria', 'rosa', 'patricia', 'marta', 'conchita', 'jimena',
             'francisca', 'marina', 'victoria'
         ];
 
-        const maleKeywords = [
+        const maleKeywords = isEnglish ? [
+            'male', 'guy', 'david', 'mark', 'george', 'ryan', 'eric', 'brian', 'andrew', 'christopher', 'alex', 'fred'
+        ] : [
             'male', 'hombre', 'jorge', 'pablo', 'raul', 'diego', 'enrique', 'carlos',
             'miguel', 'juan', 'alvaro', 'gonzalo', 'alonso', 'alberto', 'pedro',
             'manuel', 'mateo', 'tomas', 'javier', 'david', 'antonio', 'luis',
@@ -288,7 +344,7 @@ const VoiceIntercom = (function() {
         const targetGenderStr = isFemale ? 'female' : 'male';
 
         // 1. Buscar voces que coincidan con el género objetivo
-        const genderVoices = spanishVoices.filter(v => {
+        const genderVoices = langVoices.filter(v => {
             const nameLower = (v.name || '').toLowerCase();
             const vGender = (v.gender || '').toLowerCase();
             return vGender === targetGenderStr || targetKeywords.some(kw => nameLower.includes(kw));
@@ -303,16 +359,19 @@ const VoiceIntercom = (function() {
             return { voice: genderVoices[0], isExplicitGender: true };
         }
 
-        // 3. Si no hay del género, buscar cualquier voz neuronal en español
-        const anyNeuralVoice = spanishVoices.find(v => isNeuralVoice(v));
+        // 3. Si no hay del género, buscar cualquier voz neuronal en el idioma
+        const anyNeuralVoice = langVoices.find(v => isNeuralVoice(v));
         if (anyNeuralVoice) {
             return { voice: anyNeuralVoice, isExplicitGender: false };
         }
 
         // 4. Fallback a locale preferente de la región
-        const preferredLocale = spanishVoices.find(v => v.lang === 'es-US' || v.lang === 'es-MX');
+        const preferredLocale = isEnglish
+            ? langVoices.find(v => v.lang === 'en-US')
+            : langVoices.find(v => v.lang === 'es-US' || v.lang === 'es-MX');
+
         return {
-            voice: preferredLocale || spanishVoices[0],
+            voice: preferredLocale || langVoices[0],
             isExplicitGender: false
         };
     }
@@ -322,19 +381,21 @@ const VoiceIntercom = (function() {
         if (!('speechSynthesis' in window)) {
             isSpeaking = false;
             setWaveVisualizer(false, 'idle');
-            updateStatusBadge('Listo para hablar (Tu turno)...', 'teal');
+            updateStatusBadge(getLocalizedStatus('ready', false), 'teal');
             if (onFinishCallback) onFinishCallback();
             return;
         }
 
         const utterance = new SpeechSynthesisUtterance(cleanText);
         const { voice, isExplicitGender } = selectVoice(resolvedGender);
+        const lang = getAppLanguage();
+        const defaultLocale = lang === 'en' ? 'en-US' : 'es-US';
 
         if (voice) {
             utterance.voice = voice;
-            utterance.lang = voice.lang || 'es-US';
+            utterance.lang = voice.lang || defaultLocale;
         } else {
-            utterance.lang = 'es-US';
+            utterance.lang = defaultLocale;
         }
 
         const isFemale = (resolvedGender === 'F');
@@ -354,8 +415,7 @@ const VoiceIntercom = (function() {
         utterance.onstart = function() {
             isSpeaking = true;
             setWaveVisualizer(true, 'speaking');
-            const roleLabel = isFemale ? 'Residente (Voz Femenina)' : 'Residente (Voz Masculina)';
-            updateStatusBadge(`${roleLabel} hablando...`, 'amber');
+            updateStatusBadge(getLocalizedStatus('speaking', isFemale), 'amber');
         };
 
         const handleSpeechEnd = function() {
@@ -437,19 +497,19 @@ const VoiceIntercom = (function() {
         stopActiveAudio();
 
         const isFemale = (resolvedGender === 'F');
-        const roleLabel = isFemale ? 'Residente (Voz Femenina)' : 'Residente (Voz Masculina)';
 
         // Desbloquear audio si es posible
         unlockAudio();
 
+        const lang = getAppLanguage();
         // 1. Obtener audio neuronal MP3 desde Django (/tts/) mediante fetch()
         // Esto previene bloqueos por 204 No Content y evita colisiones de dos fuentes de audio simultáneas
-        const ttsUrl = `/tts/?gender=${encodeURIComponent(resolvedGender)}&text=${encodeURIComponent(cleanText)}`;
+        const ttsUrl = `/tts/?gender=${encodeURIComponent(resolvedGender)}&text=${encodeURIComponent(cleanText)}&lang=${encodeURIComponent(lang)}`;
 
         ttsAbortController = new AbortController();
         const signal = ttsAbortController.signal;
 
-        updateStatusBadge(`${roleLabel} preparando audio...`, 'amber');
+        updateStatusBadge(getLocalizedStatus('preparing', isFemale), 'amber');
 
         fetch(ttsUrl, { signal })
             .then(async response => {
@@ -477,7 +537,6 @@ const VoiceIntercom = (function() {
         currentAudioElement = audio;
 
         const isFemale = (resolvedGender === 'F');
-        const roleLabel = isFemale ? 'Residente (Voz Femenina)' : 'Residente (Voz Masculina)';
 
         const cleanup = function() {
             audio.onplay = null;
@@ -493,7 +552,7 @@ const VoiceIntercom = (function() {
             isSpeaking = false;
             currentAudioElement = null;
             setWaveVisualizer(false, 'idle');
-            updateStatusBadge('Listo para hablar (Tu turno)...', 'teal');
+            updateStatusBadge(getLocalizedStatus('ready', false), 'teal');
 
             if (onFinishCallback) onFinishCallback();
 
@@ -510,7 +569,7 @@ const VoiceIntercom = (function() {
         audio.onplay = function() {
             isSpeaking = true;
             setWaveVisualizer(true, 'speaking');
-            updateStatusBadge(`${roleLabel} hablando...`, 'amber');
+            updateStatusBadge(getLocalizedStatus('speaking', isFemale), 'amber');
         };
 
         audio.onended = handleAudioEnd;
@@ -551,13 +610,13 @@ const VoiceIntercom = (function() {
         const rec = new SpeechRec();
         rec.continuous = true;
         rec.interimResults = true;
-        rec.lang = 'es-US';
+        rec.lang = (getAppLanguage() === 'en' ? 'en-US' : 'es-US');
 
         rec.onstart = function() {
             isListening = true;
             updateMicButtonUI(true, true);
             setWaveVisualizer(true, 'listening');
-            updateStatusBadge('Escuchándote (Hable ahora)...', 'emerald');
+            updateStatusBadge(getLocalizedStatus('listening', false), 'emerald');
         };
 
         rec.onresult = function(event) {
@@ -598,7 +657,7 @@ const VoiceIntercom = (function() {
                     const textToSend = (inputField ? inputField.value : '').trim();
                     if (textToSend.length > 2) {
                         stopListening(true);
-                        updateStatusBadge('Enviando propuesta a Gemini...', 'teal');
+                        updateStatusBadge(getLocalizedStatus('sending', false), 'teal');
                         submitCurrentMessage();
                     }
                 }, 1400); // 1.4s de pausa natural tras hablar
@@ -677,7 +736,7 @@ const VoiceIntercom = (function() {
             if (inputField && inputField.value.trim().length > 1) {
                 submitCurrentMessage();
             } else {
-                updateStatusBadge('Micrófono en pausa', 'slate');
+                updateStatusBadge(getLocalizedStatus('mic_paused', false), 'slate');
             }
         } else {
             // Si el usuario activa el micrófono manualmente mientras el residente habla, interrumpir
@@ -747,23 +806,24 @@ const VoiceIntercom = (function() {
         const btn = document.getElementById('voice-mic-btn');
         const iconMic = document.getElementById('icon-mic-normal');
         const iconPulse = document.getElementById('icon-mic-active');
+        const isEnglish = (getAppLanguage() === 'en');
 
         if (!btn) return;
 
         if (!supported) {
             btn.classList.add('opacity-40', 'cursor-not-allowed');
-            btn.title = 'Reconocimiento de voz no soportado en este navegador';
+            btn.title = isEnglish ? 'Speech recognition not supported in this browser' : 'Reconocimiento de voz no soportado en este navegador';
             return;
         }
 
         if (listening) {
             btn.className = 'w-11 h-11 rounded-2xl bg-rose-500 text-white shadow-lg shadow-rose-900/50 ring-2 ring-rose-400 ring-offset-2 ring-offset-slate-950 flex items-center justify-center flex-shrink-0 transition-all';
-            btn.title = 'Escuchando tu voz... Clic para detener';
+            btn.title = isEnglish ? 'Listening to your voice... Click to stop' : 'Escuchando tu voz... Clic para detener';
             if (iconMic) iconMic.classList.add('hidden');
             if (iconPulse) iconPulse.classList.remove('hidden');
         } else {
             btn.className = 'w-11 h-11 rounded-2xl liquid-pill text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center flex-shrink-0 transition-all';
-            btn.title = 'Activar micrófono para hablar';
+            btn.title = isEnglish ? 'Activate microphone to speak' : 'Activar micrófono para hablar';
             if (iconMic) iconMic.classList.remove('hidden');
             if (iconPulse) iconPulse.classList.add('hidden');
         }
@@ -773,15 +833,16 @@ const VoiceIntercom = (function() {
     function toggleHandsFree() {
         isHandsFree = !isHandsFree;
         const btn = document.getElementById('toggle-handsfree-btn');
+        const isEnglish = (getAppLanguage() === 'en');
         if (btn) {
             if (isHandsFree) {
                 btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-teal-700 dark:text-teal-300 border-teal-500/30 bg-teal-500/10 dark:bg-teal-950/40 text-xs font-medium';
-                btn.textContent = 'Manos Libres: Activo';
-                updateStatusBadge('Modo Manos Libres encendido', 'teal');
+                btn.textContent = isEnglish ? 'Hands-Free: Active' : 'Manos Libres: Activo';
+                updateStatusBadge(isEnglish ? 'Hands-Free Mode On' : 'Modo Manos Libres encendido', 'teal');
             } else {
                 btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/5 bg-slate-100/50 dark:bg-white/5 text-xs font-medium';
-                btn.textContent = 'Manos Libres: Manual';
-                updateStatusBadge('Modo Manual (Usa el botón de micrófono)', 'slate');
+                btn.textContent = isEnglish ? 'Hands-Free: Manual' : 'Manos Libres: Manual';
+                updateStatusBadge(isEnglish ? 'Manual Mode (Use mic button)' : 'Modo Manual (Usa el botón de micrófono)', 'slate');
                 stopListening(true);
             }
         }
@@ -791,6 +852,7 @@ const VoiceIntercom = (function() {
     function toggleMute() {
         isMuted = !isMuted;
         const btn = document.getElementById('toggle-mute-btn');
+        const isEnglish = (getAppLanguage() === 'en');
         if (btn) {
             if (isMuted) {
                 stopActiveAudio();
@@ -802,18 +864,18 @@ const VoiceIntercom = (function() {
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
                     </svg>
-                    <span>Voz Silenciada</span>
+                    <span>${isEnglish ? 'Voice Muted' : 'Voz Silenciada'}</span>
                 `;
-                updateStatusBadge('Voz apagada', 'slate');
+                updateStatusBadge(isEnglish ? 'Voice muted' : 'Voz apagada', 'slate');
             } else {
                 btn.className = 'liquid-pill px-3 py-1.5 rounded-full text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5 text-xs';
                 btn.innerHTML = `
                     <svg class="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
                     </svg>
-                    <span>Voz Activa</span>
+                    <span>${isEnglish ? 'Voice Active' : 'Voz Activa'}</span>
                 `;
-                updateStatusBadge('Voz habilitada', 'teal');
+                updateStatusBadge(isEnglish ? 'Voice enabled' : 'Voz habilitada', 'teal');
             }
         }
     }
@@ -835,6 +897,14 @@ const VoiceIntercom = (function() {
         const chatCard = document.getElementById('chat-card');
         if (!chatCard) return;
 
+        const lang = getAppLanguage();
+        if (document.documentElement.lang !== lang) {
+            document.documentElement.lang = lang;
+        }
+        if (speechRecInstance) {
+            speechRecInstance.lang = (lang === 'en' ? 'en-US' : 'es-US');
+        }
+
         currentGender = getResidentGender();
 
         // Extraer el último mensaje del prospecto
@@ -851,9 +921,10 @@ const VoiceIntercom = (function() {
             // No hay mensajes del prospecto aún (el vendedor está en el pórtico)
             const waitingHook = document.getElementById('porch-waiting-hook');
             if (waitingHook && isHandsFree && !isListening) {
+                const isEnglish = (getAppLanguage() === 'en');
                 setTimeout(() => {
                     startListening();
-                    updateStatusBadge('Micrófono activo: Presenta tu gancho de apertura', 'emerald');
+                    updateStatusBadge(isEnglish ? 'Microphone active: Deliver your opening hook' : 'Micrófono activo: Presenta tu gancho de apertura', 'emerald');
                 }, 400);
             }
         }
